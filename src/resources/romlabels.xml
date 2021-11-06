@@ -1,0 +1,16 @@
+﻿<?xml version="1.0"?>
+<!-- Labels were extracted from The complete Timex TS1000/sinclair zx81 rom disassembly as found at:
+     	 https://k1.spdns.de/Vintage/Sinclair/80/Sinclair%20ZX81/ROMs/zx81%20version%202%20%27improved%27%20rom%20disassembly%20%28Logan,%20O%27Hara%29.html
+      The Original book was written by Dr. Ian Logan, and Dr. Frank O'Hara.
+      Digitising and HTMLising done by Einar Saukas with thanks to Wilf Rigter and David Gonzales and  Geoff Wearmouth. Formatting as HTML by Keith Howell.
+      Labels Extracted by GDS
+    -->
+<labels>
+<!-- Note, commented out restarts because they are never used as labels 
+	 and probably are not what's meant in the assembly listing. -->
+<label address="7ffd">ZXIO_BANKM</label>
+<label address="1ffd">ZXIO_BANK678</label>
+<!-- label address="0008">ZXROM_ERROR-1</label -->
+<!-- label address="0010">ZXROM_PRINT-A</label -->
+<!-- label address="0018">ZXROM_GET-CH.</label -->
+</labels>

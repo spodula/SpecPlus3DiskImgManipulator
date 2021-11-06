@@ -1,0 +1,202 @@
+This may be a useful reference expecially for CPM3 when i get around to supporting it:
+https://github.com/lipro-cpm4l/cpmtools
+
+CPM
+Delete file
+   Mark the first byte in the BAM as 0xE5 for each dirent
+Add file
+ allocate a dirent per 16k 
+ allocate a block per block
+ Blocks seem to be in order
+ Dirent seem to be in order by not sequential
+
+Recover file
+  Find file
+  check dirents are correct (None missing)
+  check blocks have not been re-used
+  if all ok, reset the 0xe5 tags to 0 on each bam
+
+
+====================================================================
+AMS file:
+====================================================================
+  The first 256 bytes are the "disk information block".
+  There are two types, Normal and Extended
+  
+  Normal:
+  	00-16 "MV - CPCEMU Disk-File\r\n"
+  	17-21 "Disk-Info\r\n"
+  	22-2f Name of the creator
+  	30    Number of tracks
+  	31    Number of sides
+  	32-33 Track size 
+  	34-FF Unused
+  	
+  Extended:
+  	00-16 "EXTENDED CPC DSK File\r\n"
+  	17-21 "Disk-Info\r\n"
+  	22-2f Name of the creator
+  	30    Number of tracks
+  	31    Number of sides
+  	32-33 Not used
+  	34-FF For each track, one byte representing MSB of track size, 
+  				Eg, of the track length is 4864 (0x1300 = 9 sectors of 512 bytes + 256 bytes for the track header)
+  					then the byte would be 13
+  
+  From $100 onwards is the track data. 
+	For each track:
+	00-0b "Track Info\r\n"
+	0c-0f unused
+	10    Track number
+	11    Side number
+	12-13 unused
+	14    Sector size (1=256, 2=512, 3=1024 ect) 
+	15    Number of sectors 
+	16    Gap#3 length
+	17    Filler byte
+
+  Next from 18 onwards, is the sector list information.
+  Note that the sectors in the file are not nesserilly consecutive (Indeed i have found they are mostly interleaved)  
+  This list is the same order as the data in the file
+  There are 8 bytes per record
+    00    Track (Equivelent to "C" parameter in the 765 FDC)
+    01    Side   (Equivelent to "H" parameter in the 765 FDC)
+    02    Sector ID (Equivelent to "R" parameter in the 765 FDC) (These are 1-9 for +3 disks, Others use $40-49 and $C0-C9)
+    03    Sector size  (Equivelent to "N" parameter in the 765 FDC) should be the same as #14 above
+    04    FDC status register 1 after reading
+    05    FDC status register 2 after reading
+    06-07 Actual data length of the sector in bytes
+    
+  At the next $100 boundary, the actual data starts.
+  this is just a stream of data for each sector in the same order and with the same size as the data above. 
+  
+====================================================================
+CPM file system as used on the Speccy/Amstrad CPC
+====================================================================
+https://www.seasip.info/Cpm/amsform.html
+There are a few things need to identify the CPM parameters used on a disk.
+   Firstly, check the minimum sector ID;
+   		$41: CPC system disk - These have two tracks reserved for the CPM bootsector. (9216 bytes). This leaves 171k for files (minus 2k directory entries)
+			numsides = 1
+			numtracks = 40
+			numsectors = 9
+			sectorPow = 2; (512 bytes/sector)
+			reservedTracks = 2;  
+			blockPow = 3; (1024 bytes/block)
+			dirBlocks = 2;
+			rwGapLength = 0x2a;
+			fmtGapLength = 0x52;
+   		$C1: CPC data disk - These have NO tracks reserved, thus the directory starts on Track 0, first sector. This gives the full 180K for data (minus 2k directory entries)
+			numsides = 1
+			numtracks = 40
+			numsectors = 9
+			sectorPow = 2 (512 bytes/sector);
+			reservedTracks = 0;
+			blockPow = 3 (1024 bytes/block;
+			dirBlocks = 2;
+			rwGapLength = 0x2a;
+			fmtGapLength = 0x52;
+   		$01: Speccy +3 / CPC - These have a default set of parameters, but *CAN* be overridden.  As +3 disks have 1 reserved track, this gives 175 for data (Minus the usual 2k)
+   			numsides = 1
+			numtracks = 40
+			numsectors = 9
+			sectorPow = 2 (512 bytes/sector);
+			reservedTracks = 1;
+			blockPow = 3 (1024 bytes/block);
+			dirBlocks = 2;
+			rwGapLength = 0x2a;
+			fmtGapLength = 0x52;
+			
+		These values can be overridden on the +3 and CPC if there is any data in the bootsector. (Track 0 Head 0 Sector 1) 
+		The bootsector is arranged as follows if present. If its full of $e5, the defaults above should be used
+		
+		00    0 = +3 format 1=CPC system, 2=CPC data, 3=PCW range 
+		01    Sidedness: 0=single sided, 1=double sided (Alternative sides) 2=Double sidded (Successive sides)   
+   		02    Tracks per side
+   		03    Sectors per track
+   		04    Sector size shift. 1=256, 2=512, 3=1024 ect
+   		05    Number of reserved tracks
+   		06    Block size shift 2=512, 3=1024, 4=2048 ect
+   		07    Number of directory blocks
+   		08    Gap length (RW)
+   		09    Gap length(Format)
+   		0A-0E reserved
+   		0F    Checksum fiddle byte for bootable disks.
+   		
+   			Note, for the checksum all the bytes in the bootsector are added together (Ignoring any carries).
+   			This number should be:  3 = Spectrum +3 bootable disk
+   			    					1 = Bootable PCW9512 disk
+   			    					255 = Bootable PCW8256 disk
+   			 
+	Logical blocks. 
+		cpm logical blocks start after the reserved tracks and includes the reserved blocks for the directory. 
+		Sector order is: CHS if sidedness is 0 or 1, or HCS if 2. By default assume CHS
+		
+	Directories. 
+		The first (usually 2) blocks are reserved for the directory.  This is an array of 32 byte DIRENT Structure. 
+		each of these arrays represent 16k of a file. A file can have up to 512 of these entries.
+		
+		A file is one or more of these DIRENTS. They are in order, but not nesseserilly sequential.
+		
+		A dirent is arranged as follows:
+ 		00    Status
+ 		01-08 filename
+        09-0B Extension 
+        0C    Lower 4 bits are the extent number
+        0D    Number of bytes in the last used 128 byte record where 0=128)
+        0E    Lower 5 bits are the upper bits of the extent number
+ 		0F    Number of 128 byte records used in the last logical extent. All previous extents are considered to be full.  
+        10-1F Block numbers. 
+ 
+ 		In the filename and the extension. Bit 7 can be used for various flags. (So should be masked off) 
+ 		The flags that are valid for CPM/+3 are:  [09] is read-only, 
+ 		                                          [0A] is system and
+ 		                                          [0B] is Archived.
+ 		                                          
+ 		The extent number is [AAAAABBBB] where AAAA is the lower 5 bits of $0E BBBB is the lower 4 bits of $0C
+ 		 
+		File is CPM are multiples of 128 bytes long. To determine the exact length, value of $0F is the number of 128 byte records in the last DIRENT. (The other dirents can be assumed to be full)
+
+====================================================================
++3 extensions.
+====================================================================
+  Sources:
+  https://retrocomputing.stackexchange.com/questions/14486/what-file-formats-were-used-for-binary-executable-files-on-later-sinclair-zx-spe
+  https://worldofspectrum.org/ZXSpectrum128+3Manual/chapter8pt27.html
+	
+	The main +3 Extension is the addition as a header of 128 bytes at the start of each file. 
+	This file contains data as follows:
+	
+	00-07 "PLUS3DOS"
+    08    Soft EOF character provided when reading and the file runs out. (1A on the +3)
+    09    Issue number
+    0A    Version number
+    0B-0E Filesize including the header length - LSB first
+    0F-16 BASIC header (See below)
+    17-FE Reserved (0)
+    FF    Checksum byte
+    
+  Checksum is simply the modulus of the9 bytes from 0-126 
+  Easily generated by z80 by just adding all the bytes together and ignoring any carry's  
+  
+ 
+  	BASIC header (bytes 0F-16)
+  	This is similar to the tape header minus the filename. 
+    See https://sinclair.wiki.zxnet.co.uk/wiki/Spectrum_tape_interface#Header_block   for that information. 
+ 	------------------------------
+    0F     File type (0=PROG, 1=Number array, 2=Character array, 3=code
+    10-11  File length as seen by +3 BASIC
+    12-13  PROG: Program Run line;  CODE: default load address, ARRAY: contains the encoded array name and type. (Note 1) 
+    14-15  PROG: Program offset. Unused for CODE, arrays. 
+ 
+ Notes:
+ 1: For Arrays, The array name (ALways 1 char) is encoded as follows:
+          1Y0XXXXX     where Y=1 for String array, 0 for numeric. and XXXXX is the character - 0x60
+          	EG, 0x94 = 10010100 = Numeric array, Variable J   
+          	    0X98 = 10011000 = Numeric Array, Variable x
+          	    0xC8 = 11011000 = String array, Variable x$
+    In reality, as you can get this information from 0x0f, its probably best to just mask off the top
+    two bits and add 0x60. 
+ 
+ 
+ 
