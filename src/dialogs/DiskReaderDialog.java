@@ -99,5 +99,15 @@ public class DiskReaderDialog extends Dialog {
 			System.out.print(s);
 		}
 	}
+
+	public Button GetCheckbox(Composite parent, String text, int span) {
+		Button editbox = new Button(parent, SWT.CHECK);
+		GridData data = new GridData(GridData.FILL_HORIZONTAL);
+		data.horizontalSpan = span;
+		editbox.setText(text);
+		editbox.setLayoutData(data);
+		return(editbox);
+	}
+
 	
 }

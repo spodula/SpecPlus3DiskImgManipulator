@@ -12,6 +12,7 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
@@ -26,31 +27,37 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Slider;
 import org.eclipse.swt.widgets.Text;
 
 import diskviewer.libs.Speccy;
 import diskviewer.libs.disk.cpm.CPM;
 
 public class screenDialog extends DiskReaderDialog {
-	//Filename of the source file
+	// Filename of the source file
 	public String filename = "";
-	
-	//Filename of the file on the disk. 
+
+	// Filename of the file on the disk.
 	public String NameOnDisk = "";
-	
-	//Selected image
-	private Image SelectedImage = null;
-	
-	//Raw scaled and converted image to be saved to the disk. 
+
+	//Raw image from disk., 
+	private BufferedImage RawImage = null;
+
+	// black and white flag.
+	private boolean isBW = false;
+
+	// Raw scaled and converted image to be saved to the disk.
 	public byte[] Screen = new byte[6912];
 
-	//if TRUE, the OK button was pressed, else FALSE
+	// if TRUE, the OK button was pressed, else FALSE
 	private boolean IsOk = false;
 
-	//basic constructor
+	// basic constructor
 	public screenDialog(Shell parent) {
 		super(parent);
 	}
@@ -71,7 +78,7 @@ public class screenDialog extends DiskReaderDialog {
 		Composite cp = new Composite(dialog, SWT.NONE);
 		cp.setBackground(new Color(0x80, 0x80, 0x80));
 		GridData data = new GridData(SWT.FILL, SWT.CENTER, false, false);
-		data.horizontalSpan = 4;
+		data.horizontalSpan = 5;
 		cp.setLayoutData(data);
 		cp.setLayout(new GridLayout(1, false));
 
@@ -84,7 +91,7 @@ public class screenDialog extends DiskReaderDialog {
 		Button BtnSelFile = new Button(dialog, SWT.BORDER);
 		data = new GridData();
 		data.horizontalSpan = 1;
-		data.verticalSpan = 5;
+		data.verticalSpan = 6;
 		data.minimumHeight = 192;
 		data.minimumWidth = 256;
 		BtnSelFile.setText("");
@@ -96,6 +103,40 @@ public class screenDialog extends DiskReaderDialog {
 		Text FileNameEdit = GetText(dialog, "", 3);
 		GetLabel(dialog, "Name on disk", 3);
 		Text NameOnDiskEdit = GetText(dialog, "", 3);
+		GetLabel(dialog, "Black/white?", 1);
+		Button BtnIsBW = GetCheckbox(dialog, "", 1);
+		GetLabel(dialog, "", 1);
+		GetLabel(dialog, "B/W Luma", 1);
+		Slider slider = new Slider(dialog, SWT.HORIZONTAL);
+		data = new GridData(GridData.FILL_HORIZONTAL);
+		data.horizontalSpan = 2;
+		slider.setLayoutData(data);
+		slider.setSelection(50);
+		GetLabel(dialog, "", 1);
+
+		slider.addListener(SWT.Selection, new Listener() {
+			@Override
+			public void handleEvent(Event arg0) {
+				// by default goes from 0-100
+				if (isBW) {
+					int level = (int) (slider.getSelection() * 2.5);
+					if (!FileNameEdit.getText().isEmpty()) {
+						BtnSelFile.setImage(ScaleImage(dialog.getDisplay(), level));
+					}
+				}
+
+			}
+		});
+
+		BtnIsBW.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent event) {
+				isBW = BtnIsBW.getSelection();
+				if (!FileNameEdit.getText().isEmpty()) {
+					BtnSelFile.setImage(ScaleImage(dialog.getDisplay(), 192));
+				}
+			}
+		});
 
 		BtnSelFile.addSelectionListener(new SelectionListener() {
 			public void widgetSelected(SelectionEvent event) {
@@ -130,7 +171,14 @@ public class screenDialog extends DiskReaderDialog {
 					// NameOnDisk
 					NameOnDiskEdit.setText(filename + "." + extension);
 
-					BtnSelFile.setImage(LoadAndScaleImage(selected, dialog.getDisplay()));
+					try {
+						RawImage = ImageIO.read(new File(selected));
+
+						BtnSelFile.setImage(ScaleImage(dialog.getDisplay(), 192));
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 
 				}
 			}
@@ -175,150 +223,233 @@ public class screenDialog extends DiskReaderDialog {
 	}
 
 	/**
-	 * Load an image, scale it to 256x192, and set it to 8 colours in attribute squares
-	 * returns an image, and a file in the Screen global variable.
+	 * Scale the loaded image to 256x192 into a new image, run the speccy display conversion, 
+	 * then return it as a SWT compatable image.  
 	 * 
 	 * @param selected
 	 * @return
 	 */
-	public Image LoadAndScaleImage(String selected, Display display) {
+	public Image ScaleImage(Display display, int bwSlider) {
 		BufferedImage result = new BufferedImage(256, 192, BufferedImage.TYPE_INT_RGB);
-		try {
-			BufferedImage img = ImageIO.read(new File(selected));
-			log("Image is " + img.getWidth() + "x" + img.getHeight());
-			// Scale to 256x192s
+		Image SelectedImage=null;
+		if (RawImage!=null) {
+			// Draw the loaded image to the new buffer
 			Graphics2D graphics2D = result.createGraphics();
-			graphics2D.drawImage(img, 0, 0, 256, 192, null);
+			graphics2D.drawImage(RawImage, 0, 0, 256, 192, null);
 			graphics2D.dispose();
-			// scale to 8 colours
-			for (int x = 0; x < 256; x++) {
-				for (int y = 0; y < 192; y++) {
-					int col = result.getRGB(x, y);
-					int red = (col & 0xff0000) >> 16;
-					int green = (col & 0xff00) >> 8;
-					int blue = col & 0xff;
-
-					if ((red & 0x80) == 0x80) {
-						red = 0xff;
-					} else {
-						red = 0x00;
-					}
-					if ((green & 0x80) == 0x80) {
-						green = 0xff;
-					} else {
-						green = 0x00;
-					}
-					if ((blue & 0x80) == 0x80) {
-						blue = 0xff;
-					} else {
-						blue = 0x00;
-					}
-
-					col = (red << 16) + (green << 8) + blue;
-					result.setRGB(x, y, col);
-				}
-			}
-			// Group into attributes
-			int attriblocation = 0x1800;
-			int colours[] = new int[8];
-			for (int y = 0; y < 24; y++) {
-				for (int x = 0; x < 32; x++) {
-					// Blank the colour indexes
-					for (int i = 0; i < 8; i++) {
-						colours[i] = 0;
-					}
-					// base positions.
-					int basex = x * 8;
-					int basey = y * 8;
-					// get the square
-					for (int a = 0; a < 7; a++) {
-						for (int b = 0; b < 7; b++) {
-							// col = 00000000 RRRRRRRR GGGGGGGG BBBBBBBB
-							// Speccy = 00000GRB
-							int col = result.getRGB(basex + a, basey + b);
-							int red = (col >> 16) & 0x02;
-							int green = (col >> 8) & 0x04;
-							int blue = (col & 0x01);
-							col = red + green + blue;
-							colours[col]++;
-						}
-					}
-					// find the max and max-1
-					int ink = 0;
-					int paper = 0;
-
-					int maxnum = 0;
-					for (int i = 0; i < 8; i++) {
-						if (colours[i] > maxnum) {
-							ink = i;
-							maxnum = colours[i];
-						}
-					}
-
-					colours[ink] = 0;
-					maxnum = 0;
-					for (int i = 0; i < 8; i++) {
-						if (colours[i] > maxnum) {
-							paper = i;
-							maxnum = colours[i];
-						}
-					}
-					if (maxnum == 0) {
-						paper = ink;
-					}
-					// make an array of colours
-					int newcolours[] = new int[8];
-					for (int i = 0; i < 8; i++) {
-						newcolours[i] = Speccy.colours[ink];
-					}
-					newcolours[paper] = Speccy.colours[paper];
-
-					// rewrite the square
-					Screen[attriblocation++] = (byte) (ink + (paper * 8));
-					for (int a = 0; a < 8; a++) {
-						int byt = 0;
-						for (int b = 0; b < 8; b++) {
-							int col = result.getRGB(basex + b, basey + a);
-							int red = (col >> 16) & 0x02;
-							int green = (col >> 8) & 0x04;
-							int blue = (col & 0x01);
-							col = red + green + blue;
-
-							int newcol = newcolours[col];
-
-							result.setRGB(basex + b, basey + a, newcol);
-							// calculate if we are ink or paper.
-							byt = byt << 1;
-							if (newcol == Speccy.colours[ink]) {
-								byt = byt + 1;
-							}
-						}
-						// calculate the pixel data location [ 000 aabbb cccxxxxx ] where yptn =
-						// [aacccbbb]
-						int yptn = basey + a;
-						int y1 = yptn & 0x07;
-						int y2 = (yptn & 0x38) >> 3;
-						int y3 = (yptn & 0xc0) >> 6;
-						int address = (y3 << 11) + (y1 << 8) + (y2 << 5) + (basex >> 3);
-						// write the pixel data
-						Screen[address] = (byte) (byt & 0xff);
-
-					}
-				}
+			//process it. 
+			if (isBW) {
+				RenderBW(result,bwSlider);
+			} else {
+				RenderColour(result);
 			}
 
 			// render to output image
 			graphics2D = result.createGraphics();
 			graphics2D.dispose();
-		} catch (IOException e) {
-			e.printStackTrace(System.err);
-		}
+			ImageData id = convertToSWT(result);
 
-		ImageData id = convertToSWT(result);
+			SelectedImage = new Image(display, id);
+		} 
 
-		SelectedImage = new Image(display, id);
 
 		return SelectedImage;
+	}
+
+	/**
+	 * Render the currently loaded image into a Spectrum compatable bufferedimage.
+	 * 
+	 * @param result
+	 */
+	private void RenderColour(BufferedImage result) {
+		// scale to 8 colours
+		for (int x = 0; x < 256; x++) {
+			for (int y = 0; y < 192; y++) {
+				int col = result.getRGB(x, y);
+				int red = (col & 0xff0000) >> 16;
+				int green = (col & 0xff00) >> 8;
+				int blue = col & 0xff;
+
+				if ((red & 0x80) == 0x80) {
+					red = 0xff;
+				} else {
+					red = 0x00;
+				}
+				if ((green & 0x80) == 0x80) {
+					green = 0xff;
+				} else {
+					green = 0x00;
+				}
+				if ((blue & 0x80) == 0x80) {
+					blue = 0xff;
+				} else {
+					blue = 0x00;
+				}
+
+				col = (red << 16) + (green << 8) + blue;
+				result.setRGB(x, y, col);
+			}
+		}
+		// Group into attributes
+		int attriblocation = 0x1800;
+		int colours[] = new int[8];
+		for (int y = 0; y < 24; y++) {
+			for (int x = 0; x < 32; x++) {
+				// Blank the colour indexes
+				for (int i = 0; i < 8; i++) {
+					colours[i] = 0;
+				}
+				// base positions.
+				int basex = x * 8;
+				int basey = y * 8;
+				// get the square
+				for (int a = 0; a < 7; a++) {
+					for (int b = 0; b < 7; b++) {
+						// col = 00000000 RRRRRRRR GGGGGGGG BBBBBBBB
+						// Speccy = 00000GRB
+						int col = result.getRGB(basex + a, basey + b);
+						int red = (col >> 16) & 0x02;
+						int green = (col >> 8) & 0x04;
+						int blue = (col & 0x01);
+						col = red + green + blue;
+						colours[col]++;
+					}
+				}
+				// find the max and max-1
+				int ink = 0;
+				int paper = 0;
+
+				int maxnum = 0;
+				for (int i = 0; i < 8; i++) {
+					if (colours[i] > maxnum) {
+						ink = i;
+						maxnum = colours[i];
+					}
+				}
+
+				colours[ink] = 0;
+				maxnum = 0;
+				for (int i = 0; i < 8; i++) {
+					if (colours[i] > maxnum) {
+						paper = i;
+						maxnum = colours[i];
+					}
+				}
+				if (maxnum == 0) {
+					paper = ink;
+				}
+				// make an array of colours
+				int newcolours[] = new int[8];
+				for (int i = 0; i < 8; i++) {
+					newcolours[i] = Speccy.colours[ink];
+				}
+				newcolours[paper] = Speccy.colours[paper];
+
+				// rewrite the square
+				Screen[attriblocation++] = (byte) (ink + (paper * 8));
+				for (int a = 0; a < 8; a++) {
+					int byt = 0;
+					for (int b = 0; b < 8; b++) {
+						int col = result.getRGB(basex + b, basey + a);
+						int red = (col >> 16) & 0x02;
+						int green = (col >> 8) & 0x04;
+						int blue = (col & 0x01);
+						col = red + green + blue;
+
+						int newcol = newcolours[col];
+
+						result.setRGB(basex + b, basey + a, newcol);
+						// calculate if we are ink or paper.
+						byt = byt << 1;
+						if (newcol == Speccy.colours[ink]) {
+							byt = byt + 1;
+						}
+					}
+					// calculate the pixel data location [ 000 aabbb cccxxxxx ] where yptn =
+					// [aacccbbb]
+					int yptn = basey + a;
+					int y1 = yptn & 0x07;
+					int y2 = (yptn & 0x38) >> 3;
+					int y3 = (yptn & 0xc0) >> 6;
+					int address = (y3 << 11) + (y1 << 8) + (y2 << 5) + (basex >> 3);
+					// write the pixel data
+					Screen[address] = (byte) (byt & 0xff);
+
+				}
+			}
+		}
+		
+	}
+
+	/**
+	 * Render the currently loaded images as a black and white image.
+	 * Note RGB->lum values are from ITU BT.601.
+	 * 
+	 * @param result
+	 * @param bwSlider
+	 */
+	private void RenderBW(BufferedImage result,int bwSlider) {
+		//store for pixel data
+		boolean pixels[] = new boolean[49152];
+		int pxIdx = 0;
+		
+		//loop every pixel.
+		for (int y = 0; y < 192; y++) {
+			for (int x = 0; x < 256; x++) {
+				//get the RGB values
+				int col = result.getRGB(x, y);
+				int red = (col & 0xff0000) >> 16;
+				int green = (col & 0xff00) >> 8;
+				int blue = col & 0xff;
+
+				//convert into a luminance (Greyscale) value.
+				double lum = (0.299 * red) + (0.587 * green) + (0.114 * blue);
+				int iLum = (int) Math.round(lum);
+
+				//See if the Luminance crosses the value, if so set the local image. 
+				if (iLum > bwSlider) {
+					iLum = 0xffffff;
+					pixels[pxIdx++] = false;
+				} else {
+					iLum = 0x00;
+					pixels[pxIdx++] = true;
+				}
+
+				result.setRGB(x, y, iLum);
+			}
+		}
+
+		pxIdx = 0;
+		for (int y = 0; y < 192; y++) {
+			// calculate the pixel data location [ 000 aabbb cccxxxxx ] where yptn =
+			// [aacccbbb]
+			int y1 = y & 0x07;
+			int y2 = (y & 0x38) >> 3;
+			int y3 = (y & 0xc0) >> 6;
+			int baseYAddress = (y3 << 11) + (y1 << 8) + (y2 << 5);
+
+			// write the line
+			for (int x = 0; x < 32; x++) {
+				int byt = 0;
+				for (int b = 0; b < 8; b++) {
+					boolean px = pixels[pxIdx++];
+					int col = 0;
+					if (px) {
+						col = 1;
+					}
+					byt = (byt << 1) + col;
+				}
+				int address = baseYAddress + x;
+				// write the pixel data
+				Screen[address] = (byte) (byt & 0xff);
+			}
+		}
+		// make the entire attribute area black on white.
+		for (int i = 0x1800; i < 0x1b00; i++) {
+			Screen[i] = 0x38;
+		}
+		
+		
 	}
 
 	/**

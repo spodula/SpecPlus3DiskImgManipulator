@@ -4,9 +4,9 @@ package diskviewer;
 //TODO: Add char array
 //TODO: Add Number array
 //TODO: disk text/hex  search
-//TODO: support hcs (Head/Cyl/Sector - disk type)
-//TODO: Add B&W mode into image add. 
+//TODO: support hcs (Head/Cyl/Sector - disk type) 
 //TODO: new file
+//TODO: Maven build
 
 //bugs
  
@@ -18,6 +18,7 @@ package diskviewer;
  */
 
 public class dskViewer {
+	
 	public static void start(String[] args) {
 		boolean verbose = false;
 		for(int i=0;i<args.length;i++) {

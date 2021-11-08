@@ -1,4 +1,10 @@
 package dialogs;
+/**
+ * Dialog for adding a encoding a TEXT file as basic. 
+ * Note, it does no syntax checking of the file, so if its not correct, 
+ * you will end up with Nonsense in basic errors when trying to run it. 
+ *  
+ */
 
 
 import java.io.BufferedReader;
@@ -37,6 +43,7 @@ public class basicDialog extends DiskReaderDialog {
 	//The listview used for the basic program on the form.  
 	private List BasicLines = null;
 	
+	//Start line. 0x8000 means none defined.
 	public int StartLine = 0x8000;
 
 	//if TRUE, the OK button was pressed, else FALSE
