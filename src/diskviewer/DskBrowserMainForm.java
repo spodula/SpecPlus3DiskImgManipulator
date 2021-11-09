@@ -25,6 +25,7 @@ import org.eclipse.swt.widgets.ToolItem;
 
 import dialogs.FormCloseDialog;
 import dialogs.SearchDialog;
+import diskviewer.libs.disk.BadDiskFileException;
 import diskviewer.libs.disk.ModifiedEvent;
 import diskviewer.libs.disk.cpm.PlusThreeDiskWrapper;
 import diskviewer.pages.InBrowserButtons.DisplayFileAs;
@@ -33,9 +34,9 @@ import diskviewer.pages.InBrowserButtons.ShowFile;
 import diskviewer.pages.InBrowserButtons.ShowSector;
 
 public class DskBrowserMainForm {
-	//Verbose mode for output to the console.
+	// Verbose mode for output to the console.
 	private boolean VerboseMode = false;
-	
+
 	// Last title used in the titlebar (Changes when a disk is loaded) this is used
 	// so we can add (modified) to end as required.
 	private String lasttitle = "Spectrum +3 disk viewer";
@@ -49,20 +50,23 @@ public class DskBrowserMainForm {
 	// Browser object used for output. I know this is lazy, but so am I :)
 	private Browser browser = null;
 
+	// Keep the search dialog, as we may need to close it. it can also remain open. 
+	private SearchDialog SearchDialog = null;
+
 	// The wrapper around the current disk being edited.
 	private PlusThreeDiskWrapper CurrentDisk = new PlusThreeDiskWrapper();
 
 	// Object controlling the pages used for display
 	private PageHandler pages = new PageHandler();
 
-	//Constructor allowing to set Verbose
+	// Constructor allowing to set Verbose
 	public DskBrowserMainForm(boolean VerboseMode) {
 		super();
 		this.VerboseMode = VerboseMode;
 		CurrentDisk.VerboseMode = VerboseMode;
 		pages.VerboseMode = VerboseMode;
 	}
-	
+
 	/**
 	 * Dialog loop, open and wait until closed.
 	 */
@@ -202,7 +206,7 @@ public class DskBrowserMainForm {
 		itemLoadFile.addListener(SWT.Selection, event -> {
 			FileDialog fd = new FileDialog(shell, SWT.OPEN);
 			fd.setText("Open DSK file");
-			//fd.setFilterPath("C:/");
+			// fd.setFilterPath("C:/");
 			String[] filterExt = { "*.dsk", "*.img", "*.*" };
 			fd.setFilterExtensions(filterExt);
 			String selected = fd.open();
@@ -210,6 +214,10 @@ public class DskBrowserMainForm {
 				System.out.println(selected);
 			if (selected != null && !selected.isBlank()) {
 				try {
+					if (SearchDialog != null) {
+						SearchDialog.ForceDispose();
+						SearchDialog = null;
+					}
 					CurrentDisk.load(selected);
 					// default to the filesystem page is there is a filesystem
 					if (CurrentDisk.IsValidCPMFileStructure) {
@@ -226,27 +234,31 @@ public class DskBrowserMainForm {
 		});
 
 		itemSaveFile.addListener(SWT.Selection, event -> {
-			FileDialog fd = new FileDialog(shell, SWT.SAVE);
-			fd.setText("Save DSK file");
-			String selected = fd.open();
-			if (VerboseMode)
+			if (CurrentDisk.IsValid) {
+				FileDialog fd = new FileDialog(shell, SWT.SAVE);
+				fd.setText("Save DSK file");
+				String selected = fd.open();
+				if (VerboseMode)
 					System.out.println(selected);
-			if (selected != null && !selected.isBlank()) {
-				try {
-					CurrentDisk.save(selected);
-				} catch (IOException e) {
-					e.printStackTrace();
+				if (selected != null && !selected.isBlank()) {
+					try {
+						CurrentDisk.save(selected);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}
 			}
 		});
-		
+
 		itemSearch.addListener(SWT.Selection, event -> {
-			SearchDialog sd = new SearchDialog(shell);
-			sd.open();
+			if (CurrentDisk.IsValid) {
+				if (SearchDialog != null) {
+					SearchDialog.ForceDispose();
+				}
+				SearchDialog = new SearchDialog(shell, CurrentDisk, this);
+				SearchDialog.open();
+			}
 		});
-		
-		
-		
 
 		itemInformation.addListener(SWT.Selection, event -> {
 			browser.setText(pages.GetPage(PageHandler.PAGE_SUMMARY, CurrentDisk));
@@ -302,6 +314,35 @@ public class DskBrowserMainForm {
 			result = new Image(display, new File("src/resources", name).getAbsolutePath());
 		}
 		return (result);
+	}
+
+	/**
+	 * 
+	 * @param fileDets
+	 */
+	public void GotoFileByDirent(int filenumber) {
+		pages.Files.filenum = filenumber + 1;
+
+		pages.Files.filedisplay = -1;
+		try {
+			browser.setText(pages.Files.get(CurrentDisk));
+		} catch (BadDiskFileException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 
+	 * @param track
+	 * @param head
+	 */
+	public void GotoTrack(int track, int head, int sector) {
+		pages.TrackSummary.CurrentSide = head;
+		pages.TrackSummary.CurrentTrack = track;
+		pages.TrackSummary.CurrentSector = sector;
+
+		browser.setText(pages.TrackSummary.get(CurrentDisk));
+
 	}
 
 }

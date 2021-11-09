@@ -1,6 +1,6 @@
 package dialogs;
 /**
- * Dialog for Renaming a file
+ * Dialog for adding a generic CODE file. 
  * 
  * 
  * 
@@ -45,6 +45,7 @@ public class codeDialog extends DiskReaderDialog {
 	//if TRUE, the OK button was pressed, else FALSE
 	private boolean IsOk = false;
 	
+	//Output for the file. 
 	public byte CodeAsBytes[] = null;
 
 	//basic constructor

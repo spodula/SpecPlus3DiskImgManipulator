@@ -3,7 +3,6 @@ package diskviewer;
 //TODO: Add basic file - Add variables into variable area?
 //TODO: Add char array
 //TODO: Add Number array
-//TODO: disk text/hex  search
 //TODO: support hcs (Head/Cyl/Sector - disk type) 
 //TODO: new file
 //TODO: Maven build
