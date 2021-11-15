@@ -24,6 +24,7 @@ import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 
 import dialogs.FormCloseDialog;
+import dialogs.NewDiskDialog;
 import dialogs.SearchDialog;
 import diskviewer.libs.disk.BadDiskFileException;
 import diskviewer.libs.disk.ModifiedEvent;
@@ -135,6 +136,10 @@ public class DskBrowserMainForm {
 
 		ToolBar toolbar = new ToolBar(shell, SWT.NONE);
 		toolbar.setBackground(new Color(192, 192, 192));
+		ToolItem itemNewDisk = new ToolItem(toolbar, SWT.PUSH);
+		itemNewDisk.setText("New");
+//		itemLoadFile.setImage(getImage("loadicon.png"));
+		
 		ToolItem itemLoadFile = new ToolItem(toolbar, SWT.PUSH);
 		itemLoadFile.setText("Load");
 		itemLoadFile.setImage(getImage("loadicon.png"));
@@ -203,6 +208,16 @@ public class DskBrowserMainForm {
 		status.setLayoutData(data);
 
 		/* event handling */
+		itemNewDisk.addListener(SWT.Selection, event -> {
+			NewDiskDialog drd = new NewDiskDialog(shell, this);
+			NewDiskDialog.disktype result = drd.open();
+			if (result!=null) {
+				CurrentDisk.CreateDisk(result);
+			}
+		});
+		
+
+		
 		itemLoadFile.addListener(SWT.Selection, event -> {
 			FileDialog fd = new FileDialog(shell, SWT.OPEN);
 			fd.setText("Open DSK file");

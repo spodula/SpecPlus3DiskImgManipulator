@@ -4,11 +4,13 @@ package diskviewer;
 //TODO: Add char array
 //TODO: Add Number array
 //TODO: support hcs (Head/Cyl/Sector - disk type) 
-//TODO: new file
 //TODO: Maven build
 
 //bugs
- 
+//TODO: Save does not handle extended disks properly.
+//TODO: when a blank disk is loaded/created, filesystem not displayed. 
+
+
 
 /**
  * Runnable object

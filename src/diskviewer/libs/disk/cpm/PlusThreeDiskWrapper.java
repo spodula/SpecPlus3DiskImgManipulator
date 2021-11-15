@@ -151,4 +151,13 @@ public class PlusThreeDiskWrapper extends CPMDiskWrapper {
 
 	}
 
+	/**
+	 * Create a blank disk.
+	 * @param result
+	 */
+	public void CreateDisk(dialogs.NewDiskDialog.disktype result) {
+		CreateCPMDisk(result.Track, result.Heads,result.Sectors, result.MinSector, result.IsExtended, result.filler, result.Header, result.BootSector);
+		//fix the +3 information
+	}
+
 }

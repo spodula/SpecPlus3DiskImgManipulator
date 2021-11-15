@@ -153,11 +153,7 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 
 	/**
 	 * load the given disk. This calls the lower level AMS disk loader, then parses
-	 * the CPM related information out of it if possible. If it comes across any
-	 * problems with the sector sizes or the lack of DIRENTS it marks it as invalid.
-	 * If its an Amstrad style disk, it tries to parse the bootsector DPB
-	 * information. Failing that, it defaults to a set of standard defaults for the
-	 * defined Amstrad disk types.
+	 * the CPM related information out of it if possible.
 	 * 
 	 * @param filename
 	 */
@@ -166,6 +162,21 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 			// load the low level disk information
 			super.load(filename);
 			// parse High level stuff.
+			ParseData();
+		} catch (Exception E) {
+			E.printStackTrace(System.err);
+		}
+	}
+
+	/**
+	 * This function parses the disk loaded into the track and sector data into
+	 * Dirents and other CPM information. If it comes across any problems with the
+	 * sector sizes or the lack of DIRENTS it marks it as invalid. If its an Amstrad
+	 * style disk, it tries to parse the bootsector DPB information. Failing that,
+	 * it defaults to a set of standard defaults for the defined Amstrad disk types.
+	 */
+	public void ParseData() {
+		try {
 
 			Sector BootSect = Tracks[0].GetSectorBySectorID(Tracks[0].minsectorID);
 			// Parse out the boot block.
@@ -286,17 +297,27 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 				if ((firstbyte != 0xe5) && firstbyte > 31) {
 					IsValidCPMFileStructure = false;
 				} else {
-					// Check for a valid filename
-					for (int i = 1; i < 12; i++) {
-						char c = (char) (FirstSector.data[i] & 0x7f);
-						// Flags appear on bit 7 on the extensions, shouldnt appear elsewere.
-						if (((FirstSector.data[i] & 0x80) != 0) && i < 9) {
-							IsValidCPMFileStructure = false;
+					if (firstbyte == 0xe5) {
+						for (int i = 1; i < 31; i++) {
+							char c = (char) (FirstSector.data[i] & 0xff);
+							if (c != 0xe5) {
+								IsValidCPMFileStructure = false;
+							}
 						}
-						// Check the rest of the characters
-						if (!CPM.CharIsCPMValid(c))
-							IsValidCPMFileStructure = false;
+					} else {
+						// Check for a valid filename
+						for (int i = 1; i < 12; i++) {
+							char c = (char) (FirstSector.data[i] & 0x7f);
+							// Flags appear on bit 7 on the extensions, shouldnt appear elsewere.
+							if (((FirstSector.data[i] & 0x80) != 0) && i < 9) {
+								IsValidCPMFileStructure = false;
+							}
+							// Check the rest of the characters
+							if (!CPM.CharIsCPMValid(c))
+								IsValidCPMFileStructure = false;
+						}
 					}
+
 				}
 				if (!IsValidCPMFileStructure)
 					System.out.println("Invalid CPM file structure (First Directory entry is invalid)");
@@ -684,6 +705,32 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 		}
 
 		return (result);
+	}
+
+	/**
+	 * Create a blank CPM disk. 
+	 * 
+	 * @param tracks
+	 * @param heads
+	 * @param spt
+	 * @param minsector
+	 * @param IsExtended
+	 * @param fillerbyte
+	 * @param ADFHeader
+	 * @param bootSector
+	 */
+	public void CreateCPMDisk(int tracks, int heads, int spt, int minsector, boolean IsExtended, int fillerbyte,
+			String ADFHeader, byte[] bootSector) {
+		CreateAMSDisk(tracks, heads, spt, minsector, IsExtended, ADFHeader, fillerbyte);
+		// write the bootsector
+		if (bootSector != null) {
+			Sector s = Tracks[0].GetSectorBySectorID(Tracks[0].minsectorID);
+			for (int i = 0; i < bootSector.length; i++) {
+				s.data[i] = bootSector[i];
+			}
+		}
+		//Now parse all the information into Dirents. 
+		ParseData();
 	}
 
 }

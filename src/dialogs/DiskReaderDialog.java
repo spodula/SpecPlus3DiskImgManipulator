@@ -14,9 +14,10 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
+import diskviewer.DskBrowserMainForm;
+
 public class DiskReaderDialog extends Dialog {
 	public boolean VerboseMode = false;
-	
 	
 	public DiskReaderDialog(Shell parent) {
 		super(parent);

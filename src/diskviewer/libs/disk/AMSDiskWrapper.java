@@ -1,6 +1,6 @@
 package diskviewer.libs.disk;
-
 /**
+
  * Wrapper around an AMS file. (Used for Amstrad CPC and Spectrum +3 Disk images) 
  * Handles low level Sector/track parsing and reading the disk information 
  * structures.
@@ -72,20 +72,23 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class AMSDiskWrapper {
+	public static int SECTORSIZE = 512;
+	public static String CREATOR = "Plus3DiskEditr";
+
 	public String LastFileName = "";
-	
-	//used to give lots of output during debugging. 
+
+	// used to give lots of output during debugging.
 	public boolean VerboseMode = true;
 
-	//if TRUE, a valid disk is loaded
+	// if TRUE, a valid disk is loaded
 	public boolean IsValid = false;
-	
+
 	// Copy of the disk information block at the start of the DSK file
 	private byte DiskInfoBlock[] = new byte[256];
-	
+
 	// Parsed version of above.
 	private DiskInfo ParsedDiskInfo = null;
-	
+
 	// Tracks in the file.
 	public TrackInfo Tracks[] = null;
 
@@ -119,19 +122,20 @@ public class AMSDiskWrapper {
 
 	/**
 	 * Load a file..
+	 * 
 	 * @param filename
 	 * @throws BadDiskFileException
 	 * @throws IOException
 	 */
 	public void load(String filename) throws BadDiskFileException, IOException {
-		log("AmsDiskWrapper: Loading "+filename);
+		log("AmsDiskWrapper: Loading " + filename);
 		LastFileName = filename;
 		InputStream in = new FileInputStream(filename);
 		try {
 			int chr;
 
-			//Read the ADF Disk info block into a bit of memory 
-			//This bit is always 256 bytes long.
+			// Read the ADF Disk info block into a bit of memory
+			// This bit is always 256 bytes long.
 			for (int i = 0; i < 256; i++) {
 				chr = in.read();
 				if (chr == -1) {
@@ -139,18 +143,19 @@ public class AMSDiskWrapper {
 				}
 				DiskInfoBlock[i] = (byte) (chr & 0xff);
 			}
-			//Parse the disk information into a structure. 
+			// Parse the disk information into a structure.
 			ParsedDiskInfo = new DiskInfo(DiskInfoBlock);
 			log("AmsDiskWrapper: Read and parsed AMS disk info block.");
-			log("AmsDiskWrapper: "+ParsedDiskInfo.toString());
+			log("AmsDiskWrapper: " + ParsedDiskInfo.toString());
 
-			//Allocate enough space for all the tracks on both sides of the disk.
-			//(+3 disks are usually single sided, but you can do funky things
-			//with 720K disks so lets not assume Single sided)
+			// Allocate enough space for all the tracks on both sides of the disk.
+			// (+3 disks are usually single sided, but you can do funky things
+			// with 720K disks so lets not assume Single sided)
 			Tracks = new TrackInfo[ParsedDiskInfo.tracks * ParsedDiskInfo.sides];
-			int Tracknum=0;
-			log("AmsDiskWrapper: Allocated "+String.valueOf(ParsedDiskInfo.tracks * ParsedDiskInfo.sides)+" slots for tracks. (cyl*head)");
-			
+			int Tracknum = 0;
+			log("AmsDiskWrapper: Allocated " + String.valueOf(ParsedDiskInfo.tracks * ParsedDiskInfo.sides)
+					+ " slots for tracks. (cyl*head)");
+
 			// Track sizes can be variable in the case of extended disks.
 			// eg, in the case of some copy protection methods.
 			// its easier to just load each track into an array.
@@ -177,9 +182,9 @@ public class AMSDiskWrapper {
 				CurrentTrack.tracknum = (int) CurrentRawTrack[16] & 0xff;
 				// side number
 				CurrentTrack.side = (int) CurrentRawTrack[17] & 0xff;
-				//Data rate (optional)
+				// Data rate (optional)
 				CurrentTrack.datarate = (int) CurrentRawTrack[18] & 0xff;
-				//Recording mode(optional)
+				// Recording mode(optional)
 				CurrentTrack.recordingmode = (int) CurrentRawTrack[19] & 0xff;
 				// sector size
 				CurrentTrack.sectorsz = (int) CurrentRawTrack[20] * 256;
@@ -195,14 +200,14 @@ public class AMSDiskWrapper {
 				// *********************************************************
 				CurrentTrack.Sectors = new Sector[CurrentTrack.numsectors];
 				int sectorbase = 24;
-				int minsector=255; 				
-				int maxsector=0;
+				int minsector = 255;
+				int maxsector = 0;
 				for (int i = 0; i < CurrentTrack.numsectors; i++) {
 					Sector CurrentSector = new Sector();
 					// track
-					CurrentSector.track = (int) CurrentRawTrack[sectorbase]& 0xff;
+					CurrentSector.track = (int) CurrentRawTrack[sectorbase] & 0xff;
 					// side
-					CurrentSector.side = (int) CurrentRawTrack[sectorbase + 1]& 0xff;
+					CurrentSector.side = (int) CurrentRawTrack[sectorbase + 1] & 0xff;
 					// sector id
 					CurrentSector.sectorID = (int) CurrentRawTrack[sectorbase + 2] & 0xff;
 					if (CurrentSector.sectorID > maxsector) {
@@ -212,11 +217,11 @@ public class AMSDiskWrapper {
 						minsector = CurrentSector.sectorID;
 					}
 					// sector sz
-					CurrentSector.Sectorsz = (int) CurrentRawTrack[sectorbase + 3]& 0xff;
+					CurrentSector.Sectorsz = (int) CurrentRawTrack[sectorbase + 3] & 0xff;
 					// fdc status 1
-					CurrentSector.FDCsr1 = (int) CurrentRawTrack[sectorbase + 4]& 0xff;
+					CurrentSector.FDCsr1 = (int) CurrentRawTrack[sectorbase + 4] & 0xff;
 					// fdc statuis 2
-					CurrentSector.FDCsr2 = (int) CurrentRawTrack[sectorbase + 5]& 0xff;
+					CurrentSector.FDCsr2 = (int) CurrentRawTrack[sectorbase + 5] & 0xff;
 					// actual data length. Note this is only valid on EXTENDED format disks.
 					// If not the case, the sector size read from the track block.
 					CurrentSector.ActualSize = (int) (CurrentRawTrack[sectorbase + 7] & 0xff) * 256
@@ -230,25 +235,25 @@ public class AMSDiskWrapper {
 				}
 				CurrentTrack.minsectorID = minsector;
 				CurrentTrack.maxsectorID = maxsector;
-				
-				//The first sector is is after the track information block on the next $100 junction. 
+
+				// The first sector is is after the track information block on the next $100
+				// junction.
 				sectorbase = sectorbase + 0x100;
 				sectorbase = sectorbase - (sectorbase % 0x100);
-				
+
 				// *********************************************************
 				// now the sector data
 				// sectorbase should now point to the start of the first sector.
 				// *********************************************************
-				for(Sector sect: CurrentTrack.Sectors) {
+				for (Sector sect : CurrentTrack.Sectors) {
 					byte rawdata[] = new byte[sect.ActualSize];
-					for (int i=0;i < sect.ActualSize;i++) {
+					for (int i = 0; i < sect.ActualSize; i++) {
 						rawdata[i] = CurrentRawTrack[sectorbase++];
 					}
 					sect.data = rawdata;
 				}
-				
-			
-				//Now add the completed track to the track list.
+
+				// Now add the completed track to the track list.
 				if (VerboseMode) {
 					log(CurrentTrack.AsString());
 				} else {
@@ -256,7 +261,7 @@ public class AMSDiskWrapper {
 				}
 				Tracks[Tracknum++] = CurrentTrack;
 			}
-			System.out.println(" "+String.valueOf(Tracknum)+" tracks");
+			System.out.println(" " + String.valueOf(Tracknum) + " tracks");
 
 		} finally {
 			in.close();
@@ -334,4 +339,102 @@ public class AMSDiskWrapper {
 
 	}
 
+	/**
+	 * Create a blank AMS disk with the given tracks, heads, sectors per track, ect.
+	 * 
+	 * @param tracks
+	 * @param heads
+	 * @param spt
+	 * @param minsector
+	 * @param fillerbyte
+	 * @throws BadDiskFileException
+	 */
+	public void CreateAMSDisk(int tracks, int heads, int spt, int minsector, boolean IsExtended, String ADFHeader,
+			int fillerbyte) {
+		// ADF header
+		DiskInfoBlock = new byte[256];
+		for (int i = 0; i < DiskInfoBlock.length; i++) {
+			DiskInfoBlock[i] = 0;
+		}
+
+		// copy in the header.
+		for (int i = 0; i < ADFHeader.length(); i++) {
+			DiskInfoBlock[i] = (byte) ADFHeader.charAt(i);
+		}
+
+		// creator
+		for (int i = 0; i < CREATOR.length(); i++) {
+			DiskInfoBlock[0x22 + i] = (byte) CREATOR.charAt(i);
+		}
+
+		// tracks and sides.
+		DiskInfoBlock[0x30] = (byte) tracks;
+		DiskInfoBlock[0x31] = (byte) heads;
+
+		if (!IsExtended) {
+			// Size of track. (Sector size * sector + track info block (256) )
+			int tracksz = (SECTORSIZE * spt) + 0x100;
+			DiskInfoBlock[0x32] = (byte) (tracksz & 0xff);
+			DiskInfoBlock[0x33] = (byte) (tracksz / 256);
+		} else {
+			// extended disks have a track size for each track.
+			int tracksz = (SECTORSIZE * spt) + 0x100;
+			// just want the highest byte.
+
+			// write all the track sizes.
+			tracksz = tracksz / 0x100;
+			for (int i = 0; i < tracks * heads; i++) {
+				DiskInfoBlock[0x34 + i] = (byte) tracksz;
+			}
+		}
+		try {
+			ParsedDiskInfo = new DiskInfo(DiskInfoBlock);
+
+			Tracks = new TrackInfo[tracks * heads];
+
+			// write each track.
+			for (int tracknum = 0; tracknum < tracks; tracknum++) {
+				for (int headnum = 0; headnum < heads; headnum++) {
+					// track information block
+					TrackInfo newtrack = new TrackInfo();
+					newtrack.header = "Track-Info\r\n";
+					newtrack.tracknum = tracknum;
+					newtrack.side = headnum;
+					newtrack.gap3len = 0x42; ////////////////////////////////////
+					newtrack.fillerByte = fillerbyte;
+					newtrack.minsectorID = minsector;
+					newtrack.maxsectorID = minsector + spt - 1;
+					newtrack.datarate = 0;
+					newtrack.recordingmode = 0;
+
+					// sectors
+					newtrack.Sectors = new Sector[spt];
+					for (int sectnum = 0; sectnum < spt; sectnum++) {
+						Sector NewSector = new Sector();
+
+						NewSector.track = tracknum;
+						NewSector.side = headnum;
+						NewSector.sectorID = sectnum + minsector;
+
+						NewSector.Sectorsz = 0x02;
+
+						NewSector.FDCsr1 = 0;
+						NewSector.FDCsr2 = 0;
+
+						NewSector.ActualSize = 512;
+
+						NewSector.data = new byte[512];
+						for (int i = 0; i < 512; i++) {
+							NewSector.data[i] = (byte) fillerbyte;
+						}
+						newtrack.Sectors[sectnum] = NewSector;
+					}
+					Tracks[(tracknum * heads) + headnum] = newtrack;
+				} // headnum
+			} // tracknum
+		} catch (BadDiskFileException e) {
+			e.printStackTrace();
+		}
+		IsValid = true;
+	}
 }
