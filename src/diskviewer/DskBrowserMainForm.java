@@ -135,10 +135,10 @@ public class DskBrowserMainForm {
 		shell.setText("Spectrum 3 disk viewer");
 
 		ToolBar toolbar = new ToolBar(shell, SWT.NONE);
-		toolbar.setBackground(new Color(192, 192, 192));
+		toolbar.setBackground(new Color(shell.getDisplay(), 192, 192, 192));
 		ToolItem itemNewDisk = new ToolItem(toolbar, SWT.PUSH);
 		itemNewDisk.setText("New");
-//		itemLoadFile.setImage(getImage("loadicon.png"));
+		itemNewDisk.setImage(getImage("newicon.png"));
 		
 		ToolItem itemLoadFile = new ToolItem(toolbar, SWT.PUSH);
 		itemLoadFile.setText("Load");
@@ -213,6 +213,22 @@ public class DskBrowserMainForm {
 			NewDiskDialog.disktype result = drd.open();
 			if (result!=null) {
 				CurrentDisk.CreateDisk(result);
+				try {
+					if (SearchDialog != null) {
+						SearchDialog.ForceDispose();
+						SearchDialog = null;
+					}
+					// default to the filesystem page is there is a filesystem
+					if (CurrentDisk.IsValidCPMFileStructure) {
+						browser.setText(pages.GetPage(4, CurrentDisk));
+					} else {
+						// otherwise, the raw disk structure.
+						browser.setText(pages.GetPage(1, CurrentDisk));
+					}
+					SetHeader("<New disk>");
+				} catch (Exception E) {
+					System.out.println("Error loading." + E.getMessage());
+				}
 			}
 		});
 		

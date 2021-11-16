@@ -86,6 +86,9 @@ public class FileSystemPage extends page {
 				i++;
 			}
 			result = result + "</table>\r\n<br>";
+			if (disk.DirectoryEntries!=null || disk.DirectoryEntries.length == 0) {
+				result = result +"<h2>No files</h2>"; 
+			}
 
 			// Now display the BAM in 32 block sections.
 			// Create a BAM populated with filename numbers.

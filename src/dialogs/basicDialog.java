@@ -16,6 +16,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Device;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.layout.GridData;
@@ -111,7 +112,10 @@ public class basicDialog extends DiskReaderDialog {
 		dialog.setLayout(new GridLayout(4, false));
 
 		Composite cp = new Composite(dialog, SWT.NONE);
-		cp.setBackground(new Color(0x80, 0x80, 0x80));
+		
+		
+		
+		cp.setBackground(new Color( dialog.getDisplay(), 0x80, 0x80, 0x80));
 		GridData data = new GridData(SWT.FILL, SWT.CENTER, false, false);
 		data.horizontalSpan = 4;
 		cp.setLayoutData(data);

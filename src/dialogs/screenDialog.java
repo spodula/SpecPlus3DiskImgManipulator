@@ -76,7 +76,7 @@ public class screenDialog extends DiskReaderDialog {
 		dialog.setLayout(new GridLayout(4, false));
 
 		Composite cp = new Composite(dialog, SWT.NONE);
-		cp.setBackground(new Color(0x80, 0x80, 0x80));
+		cp.setBackground(new Color(dialog.getDisplay(),0x80, 0x80, 0x80));
 		GridData data = new GridData(SWT.FILL, SWT.CENTER, false, false);
 		data.horizontalSpan = 5;
 		cp.setLayoutData(data);
