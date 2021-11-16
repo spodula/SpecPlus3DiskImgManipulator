@@ -1,13 +1,13 @@
 This is a simple raw file used as an example to code to. 
 
-Basic file:
+# Basic file:
 10     LET a=10(10.0)
 20     LET b=10.1(10.100000001490116)
 30 	   LET A$="fred"
 
 This has been run and the three variables are set. 
 
-Raw file:
+# Raw file:
 00-07 50 4c 55 53 33 44 4f 53  - "PLUS3DOS"
 08: 1A SofEOF=0x1A
 09: 01 Issue: 1
