@@ -60,7 +60,7 @@ Raw file:
     22 66 72 65 64 22 : "fred"
     0D: end of line
 
-;Start of variables as in program offset. 
+;Start of variables as in program offset.  (0x31+0x80 = 0xB1)
 00B1: 61  01100001 =number, Single byte name, name = a (00001 + 0x60)
 00B2: 00 00 0A 00 00: Integer, value=10
 00B7: 62  01100010 =number, Single byte name, name = b (00010 + 0x60)
