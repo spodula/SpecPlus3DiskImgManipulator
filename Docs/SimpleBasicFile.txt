@@ -12,7 +12,7 @@ Raw file:
 08: 1A SofEOF=0x1A
 09: 01 Issue: 1
 0A: 00 Version 0
-0B-0E: C4 00 00 00  = file size = 196 bytes
+0B-0E: C4 00 00 00  = file size = 196 bytes (128 bytes of +3DOS header and 68 bytes of actual speccy program)
 ----------
 ;BASIC header
 ----------
@@ -25,10 +25,11 @@ Raw file:
 13: 80 } start line: 32768 (not set)
 ----------
 14: 31 }
-15: 00 } Program offset: 49  (start of Variables area)
+15: 00 } Program offset: 49  (start of Variables area within the program area)
 ----------
 7F: F6 Checksum:
 
+Start of the program area (0x80)
 ---------------------------
 0080: 00 0A 0C 00 F1 61 3D 31 30 0E 00 00 0A 00 00 0D
 	00 0A: Line num: 10
