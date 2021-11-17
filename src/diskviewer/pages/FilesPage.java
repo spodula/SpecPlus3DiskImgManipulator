@@ -1,4 +1,7 @@
 package diskviewer.pages;
+/**
+ * This supplies the text for individual files. 
+ */
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -158,7 +161,7 @@ public class FilesPage extends page {
 				sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum
 						+ "','4')\" style=\"width:160\" " + scrDisabled + ">SCREEN$</button></td>\r\n");
 				sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum
-						+ "','5')\" style=\"width:160\" " + scrDisabled + ">Assembly</button></td><br>\r\n");
+						+ "','5')\" style=\"width:160\">Assembly</button></td><br>\r\n");
 
 				// Select default page depending on what file type is in the header
 				if (header.IsPlusThreeDosFile) {

@@ -26,6 +26,8 @@ public  class ShowSector extends BrowserFunction {
 	public Object function(Object[] arguments) {
 		Trackpage.CurrentSide = Integer.parseInt((String) arguments[0]);
 		Trackpage.CurrentTrack = Integer.parseInt((String) arguments[1]);
+		Trackpage.LastAsm =  ((String) arguments[2]).equals("1"); 
+		
 		this.getBrowser().setText(Trackpage.get(CurrentDisk));
 
 		return null;

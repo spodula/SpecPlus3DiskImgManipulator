@@ -3,7 +3,6 @@ package diskviewer;
 //TODO: Add basic file - Add variables into variable area?
 //TODO: Add char array
 //TODO: Add Number array 
-//TODO: Disassemble Sectors in non-Dos disks
 
 //bugs
 
