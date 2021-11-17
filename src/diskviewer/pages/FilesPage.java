@@ -14,6 +14,8 @@ import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
 
+import diskviewer.libs.ASMLib;
+
 /**
  * 
  * Display the file page as set in filenum
@@ -21,6 +23,7 @@ import javax.imageio.stream.ImageOutputStream;
  */
 
 import diskviewer.libs.Speccy;
+import diskviewer.libs.ASMLib.DecodedASM;
 import diskviewer.libs.disk.BadDiskFileException;
 import diskviewer.libs.disk.cpm.DirectoryEntry;
 import diskviewer.libs.disk.cpm.Dirent;
@@ -34,171 +37,176 @@ public class FilesPage extends page {
 
 	public String get(PlusThreeDiskWrapper disk) throws BadDiskFileException {
 		try {
-		LastDisk = disk;
-		StringBuilder sb = new StringBuilder();
+			LastDisk = disk;
+			StringBuilder sb = new StringBuilder();
 
-		sb.append(DEFAULT_TABLE_STYLESHEET);
+			sb.append(DEFAULT_TABLE_STYLESHEET);
 
-		int i = 1;
-		for (DirectoryEntry d : disk.DirectoryEntries) {
-			String entries = "";
-			for (Dirent entry : d.dirents) {
-				if (!entries.isBlank()) {
-					entries = entries + ", ";
+			int i = 1;
+			for (DirectoryEntry d : disk.DirectoryEntries) {
+				String entries = "";
+				for (Dirent entry : d.dirents) {
+					if (!entries.isBlank()) {
+						entries = entries + ", ";
+					}
+					entries = entries + String.valueOf(entry.entrynum);
 				}
-				entries = entries + String.valueOf(entry.entrynum);
-			}
-			String blocks = "";
-			for (int block : d.getBlocks()) {
-				if (!blocks.isBlank()) {
-					blocks = blocks + ", ";
+				String blocks = "";
+				for (int block : d.getBlocks()) {
+					if (!blocks.isBlank()) {
+						blocks = blocks + ", ";
+					}
+					blocks = blocks + String.valueOf(block);
+
 				}
-				blocks = blocks + String.valueOf(block);
-
+				sb.append("<button type=\"button\" onclick=\"ShowFile('" + i + "')\" style=\"width:100\">"
+						+ d.filename() + "</button>");
+				i++;
 			}
-			sb.append("<button type=\"button\" onclick=\"ShowFile('" + i + "')\" style=\"width:100\">" + d.filename()
-					+ "</button>");
-			i++;
-		}
-		sb.append("\r\n<br>");
+			sb.append("\r\n<br>");
 
-		if (filenum > 0) {
-			DirectoryEntry d = disk.DirectoryEntries[filenum - 1];
-			String attrib = "";
-			Dirent FirstDirEnt = d.dirents[0];
-			if (FirstDirEnt.GetReadOnly())
-				attrib = attrib + "R";
-			if (FirstDirEnt.GetSystem())
-				attrib = attrib + "S";
-			if (FirstDirEnt.GetArchive())
-				attrib = attrib + "A";
-			String deletedtext = "";
-			if (d.IsDeleted) {
-				deletedtext = " (DELETED)";
-			}
+			if (filenum > 0) {
+				DirectoryEntry d = disk.DirectoryEntries[filenum - 1];
+				String attrib = "";
+				Dirent FirstDirEnt = d.dirents[0];
+				if (FirstDirEnt.GetReadOnly())
+					attrib = attrib + "R";
+				if (FirstDirEnt.GetSystem())
+					attrib = attrib + "S";
+				if (FirstDirEnt.GetArchive())
+					attrib = attrib + "A";
+				String deletedtext = "";
+				if (d.IsDeleted) {
+					deletedtext = " (DELETED)";
+				}
 
-			sb.append("<h1>File " + d.filename() + deletedtext + "</h1>\r\n<h2>CPM level information</h2>");
-			sb.append("<button type=\"button\" onclick=\"Fileop('" + filenum
-					+ "','1')\" style=\"width:200;height:40\">Extract file</button>\r\n");
-			sb.append("<button type=\"button\" onclick=\"Fileop('" + filenum
-					+ "','2')\" style=\"width:200;height:40\">Extract With +3dos header</button>\r\n");
-			if (d.IsDeleted) {
+				sb.append("<h1>File " + d.filename() + deletedtext + "</h1>\r\n<h2>CPM level information</h2>");
 				sb.append("<button type=\"button\" onclick=\"Fileop('" + filenum
-						+ "','8')\" style=\"width:200;height:40\">UnDelete file</button>\r\n");
-			} else {
+						+ "','1')\" style=\"width:200;height:40\">Extract file</button>\r\n");
 				sb.append("<button type=\"button\" onclick=\"Fileop('" + filenum
-						+ "','3')\" style=\"width:200;height:40\">Delete file</button>\r\n");
-			}
-			sb.append("<button type=\"button\" onclick=\"Fileop('" + filenum
-					+ "','4')\" style=\"width:200;height:40\">Rename file</button>\r\n");
-
-			sb.append("<br>\r\n<br>\r\n<table>");
-			sb.append("<tr><th><b>Filename</b></th><td>" + d.filename() + "</td>" + "<th><b>User#</b></th><td>"
-					+ FirstDirEnt.GetUserNumber() + "</td>" + "<th><b>Attributes</b></th><td>" + attrib + "</td>"
-					+ "<th><b>Logical File size</b></th><td>" + d.GetFileSize() + "b</td></tr>\r\n");
-			sb.append("</table>\r\n");
-
-			// Get the +3DOS header
-			Plus3DosFileHeader header = d.GetPlus3DosHeader();
-			if (!header.IsPlusThreeDosFile) {
-				sb.append("<h2>Not a +3Dos file</h2>");
-			} else {
-				sb.append("<h2>Plus3DOS header information</h2>\r\n");
-
-				sb.append("<table>");
-				sb.append("<tr><th><b>Signature</b></th><td>" + header.Signature + "</td>\r\n"
-						+ "<th><b>File size</b></th><td>" + header.fileSize + "</td>\r\n" + "<th><b>Issue</b></th><td>"
-						+ String.valueOf(header.IssueNo) + "</td>\r\n");
-				sb.append("<th><b>SoftEOF byte</b></th><td>" + String.valueOf(header.SoftEOF) + "</td>\r\n"
-						+ "<th><b>Version</b></th><td>" + String.valueOf(header.VersionNo) + "</td>\r\n"
-						+ "<th><b>Checksum</b></th><td>" + String.valueOf(header.CheckSum) + "</td></tr>\r\n");
-
-				sb.append("</table>\r\n");
-				sb.append("<h2>BASIC header information</h2>\r\n");
-
-				String filetypes[] = { "Program", "Numeric array", "Char array", "Code" };
-
-				sb.append("<table>\r\n");
-				sb.append("<tr><th><b>File type</b></th><td>" + filetypes[header.filetype] + " (" + header.filetype
-						+ ")</td>\r\n");
-				sb.append("<th><b>File length</b></th><td>" + header.filelength + "</td>\r\n");
-				if (header.filetype == Plus3DosFileHeader.FILETYPE_BASIC) {
-					sb.append("<th><b>Run Line</b></th><td>" + header.line + "</td>\r\n");
-					sb.append("<th><b>Variables offset</b></th><td>" + header.VariablesOffset+ "</td>\r\n");
-				} else if (header.filetype == Plus3DosFileHeader.FILETYPE_CODE) {
-					sb.append("<th><b>Load address</b></th><td>" + header.loadAddr + "</td>\r\n");
+						+ "','2')\" style=\"width:200;height:40\">Extract With +3dos header</button>\r\n");
+				if (d.IsDeleted) {
+					sb.append("<button type=\"button\" onclick=\"Fileop('" + filenum
+							+ "','8')\" style=\"width:200;height:40\">UnDelete file</button>\r\n");
 				} else {
-					sb.append("<th><b>Variable</b></th><td>" + header.VarName + "</td>\r\n");
-					sb.append(
-							"<th><b>Checksum Valid</b></th><td>" + String.valueOf(header.ChecksumValid) + "</td>\r\n");
+					sb.append("<button type=\"button\" onclick=\"Fileop('" + filenum
+							+ "','3')\" style=\"width:200;height:40\">Delete file</button>\r\n");
 				}
+				sb.append("<button type=\"button\" onclick=\"Fileop('" + filenum
+						+ "','4')\" style=\"width:200;height:40\">Rename file</button>\r\n");
 
-				sb.append("</tr></table>\r\n<br>\r\n");
-			}
-			String BasicDisabled = "";
-			String ArrayDisabled = "";
-			String scrDisabled = "";
-			if (header.filetype != Plus3DosFileHeader.FILETYPE_BASIC)
-				BasicDisabled = "disabled";
-			if ((header.filetype != Plus3DosFileHeader.FILETYPE_CHRARRAY)
-					&& (header.filetype != Plus3DosFileHeader.FILETYPE_NUMARRAY))
-				ArrayDisabled = "disabled";
+				sb.append("<br>\r\n<br>\r\n<table>");
+				sb.append("<tr><th><b>Filename</b></th><td>" + d.filename() + "</td>" + "<th><b>User#</b></th><td>"
+						+ FirstDirEnt.GetUserNumber() + "</td>" + "<th><b>Attributes</b></th><td>" + attrib + "</td>"
+						+ "<th><b>Logical File size</b></th><td>" + d.GetFileSize() + "b</td></tr>\r\n");
+				sb.append("</table>\r\n");
 
-			sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum
-					+ "','0')\" style=\"width:180\">RAW +3DOS Data</button></td>\r\n");
-			sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum
-					+ "','1')\" style=\"width:180\">RAW File Data</button></td>\r\n");
-			sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum + "','2')\" style=\"width:180\" "
-					+ BasicDisabled + ">BASIC</button></td>\r\n");
-			sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum + "','3')\" style=\"width:180\" "
-					+ ArrayDisabled + ">ARRAY</button></td>\r\n");
-			sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum + "','4')\" style=\"width:180\" "
-					+ scrDisabled + ">SCREEN$</button></td><br>\r\n");
+				// Get the +3DOS header
+				Plus3DosFileHeader header = d.GetPlus3DosHeader();
+				if (!header.IsPlusThreeDosFile) {
+					sb.append("<h2>Not a +3Dos file</h2>");
+				} else {
+					sb.append("<h2>Plus3DOS header information</h2>\r\n");
 
-			// Select default page depending on what file type is in the header
-			if (header.IsPlusThreeDosFile) {
-				// If the header is present...
-				if (filedisplay == -1) {
+					sb.append("<table>");
+					sb.append("<tr><th><b>Signature</b></th><td>" + header.Signature + "</td>\r\n"
+							+ "<th><b>File size</b></th><td>" + header.fileSize + "</td>\r\n"
+							+ "<th><b>Issue</b></th><td>" + String.valueOf(header.IssueNo) + "</td>\r\n");
+					sb.append("<th><b>SoftEOF byte</b></th><td>" + String.valueOf(header.SoftEOF) + "</td>\r\n"
+							+ "<th><b>Version</b></th><td>" + String.valueOf(header.VersionNo) + "</td>\r\n"
+							+ "<th><b>Checksum</b></th><td>" + String.valueOf(header.CheckSum) + "</td></tr>\r\n");
+
+					sb.append("</table>\r\n");
+					sb.append("<h2>BASIC header information</h2>\r\n");
+
+					String filetypes[] = { "Program", "Numeric array", "Char array", "Code" };
+
+					sb.append("<table>\r\n");
+					sb.append("<tr><th><b>File type</b></th><td>" + filetypes[header.filetype] + " (" + header.filetype
+							+ ")</td>\r\n");
+					sb.append("<th><b>File length</b></th><td>" + header.filelength + "</td>\r\n");
 					if (header.filetype == Plus3DosFileHeader.FILETYPE_BASIC) {
-						filedisplay = 2;
-					} else if (header.filetype == Plus3DosFileHeader.FILETYPE_CHRARRAY) {
-						filedisplay = 3;
-					} else if (header.filetype == Plus3DosFileHeader.FILETYPE_NUMARRAY) {
-						filedisplay = 3;
+						sb.append("<th><b>Run Line</b></th><td>" + header.line + "</td>\r\n");
+						sb.append("<th><b>Variables offset</b></th><td>" + header.VariablesOffset + "</td>\r\n");
+					} else if (header.filetype == Plus3DosFileHeader.FILETYPE_CODE) {
+						sb.append("<th><b>Load address</b></th><td>" + header.loadAddr + "</td>\r\n");
 					} else {
-						//special case for code files of length 6912, probably screen file. 
-						if  (header.filelength == 6912) {
-							filedisplay = 4;
+						sb.append("<th><b>Variable</b></th><td>" + header.VarName + "</td>\r\n");
+						sb.append("<th><b>Checksum Valid</b></th><td>" + String.valueOf(header.ChecksumValid)
+								+ "</td>\r\n");
+					}
+
+					sb.append("</tr></table>\r\n<br>\r\n");
+				}
+				String BasicDisabled = "";
+				String ArrayDisabled = "";
+				String scrDisabled = "";
+				if (header.filetype != Plus3DosFileHeader.FILETYPE_BASIC)
+					BasicDisabled = "disabled";
+				if ((header.filetype != Plus3DosFileHeader.FILETYPE_CHRARRAY)
+						&& (header.filetype != Plus3DosFileHeader.FILETYPE_NUMARRAY))
+					ArrayDisabled = "disabled";
+
+				sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum
+						+ "','0')\" style=\"width:160\">RAW +3DOS Data</button></td>\r\n");
+				sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum
+						+ "','1')\" style=\"width:160\">RAW File Data</button></td>\r\n");
+				sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum
+						+ "','2')\" style=\"width:160\" " + BasicDisabled + ">BASIC</button></td>\r\n");
+				sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum
+						+ "','3')\" style=\"width:160\" " + ArrayDisabled + ">ARRAY</button></td>\r\n");
+				sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum
+						+ "','4')\" style=\"width:160\" " + scrDisabled + ">SCREEN$</button></td>\r\n");
+				sb.append("<button type=\"button\" onclick=\"DisplayFileAs('" + filenum
+						+ "','5')\" style=\"width:160\" " + scrDisabled + ">Assembly</button></td><br>\r\n");
+
+				// Select default page depending on what file type is in the header
+				if (header.IsPlusThreeDosFile) {
+					// If the header is present...
+					if (filedisplay == -1) {
+						if (header.filetype == Plus3DosFileHeader.FILETYPE_BASIC) {
+							filedisplay = 2;
+						} else if (header.filetype == Plus3DosFileHeader.FILETYPE_CHRARRAY) {
+							filedisplay = 3;
+						} else if (header.filetype == Plus3DosFileHeader.FILETYPE_NUMARRAY) {
+							filedisplay = 3;
 						} else {
-							filedisplay = 1;
+							// special case for code files of length 6912, probably screen file.
+							if (header.filelength == 6912) {
+								filedisplay = 4;
+							} else {
+								filedisplay = 1;
+							}
 						}
 					}
+				} else {
+					// No +3dos header just display raw file.
+					filedisplay = 0;
 				}
-			} else {
-				// No +3dos header just display raw file.
-				filedisplay = 0;
+
+				byte file[] = d.GetFileData();
+				if (filedisplay == 1 || filedisplay == 0) {
+					DecodeFileAsCODE(sb, file, (filedisplay == 1));
+				}
+				if (filedisplay == 2) { // basic
+					DecodeFileAsBASIC(sb, file, header);
+				}
+				if (filedisplay == 3) { // Array
+					DecodeFileAsArray(sb, file, header, true);
+				}
+				if (filedisplay == 4) { // screen$
+					DecodeFileAsScreen(sb, file);
+				}
+				if (filedisplay == 5) { // Disassembly
+					DecodeFileAsAssembly(sb, file, header.loadAddr );
+				}
 			}
 
-			byte file[] = d.GetFileData();
-			if (filedisplay == 1 || filedisplay == 0) {
-				DecodeFileAsCODE(sb, file, (filedisplay == 1));
-			}
-			if (filedisplay == 2) { // basic
-				DecodeFileAsBASIC(sb, file, header);
-			}
-			if (filedisplay == 3) { // Array
-				DecodeFileAsArray(sb, file, header, true);
-			}
-			if (filedisplay == 4) { // screen$
-				DecodeFileAsScreen(sb, file);
-			}
-		}
-
-		return (sb.toString());
+			return (sb.toString());
 		} catch (Exception E) {
 			System.out.println(E.getLocalizedMessage());
 			E.printStackTrace();
-			return(E.getLocalizedMessage());
+			return (E.getLocalizedMessage());
 		}
 	}
 
@@ -276,7 +284,7 @@ public class FilesPage extends page {
 		Speccy.DecodeBasicFromLoadedFile(file, sb, header, false);
 		sb.append("<br><h1>Variables area</h1><pre>");
 		Speccy.DecodeVariablesFromLoadedFile(file, sb, header);
-		
+
 		sb.append("</pre>\r\n");
 	}
 
@@ -594,8 +602,6 @@ public class FilesPage extends page {
 		}
 	}
 
-
-
 	/**
 	 * Save a file to disk as BASIC
 	 * 
@@ -666,11 +672,71 @@ public class FilesPage extends page {
 		}
 	}
 
+	/**
+	 * Decode the code section as assembly.
+	 * 
+	 * @param sb
+	 * @param file
+	 */
 	public void renameFile(String newFilename) {
 		if (filenum > 0 && LastDisk != null) {
 			DirectoryEntry d = LastDisk.DirectoryEntries[filenum - 1];
 			d.RenameTo(newFilename);
 		}
+	}
+
+	
+	private void DecodeFileAsAssembly(StringBuilder sb, byte[] file, int start) {
+		sb.append("<table class=\"hex\">\r\n"
+					+ "<tr><th colspan=4>" + "Disassembled file" + "</td></tr>\r\n"
+				    + "<tr><th>Loaded address</th><th>Hex</th><th>Asm</th><th>chr</th></tr>\r\n");
+		ASMLib asm = new ASMLib();
+		int loadedaddress = start;
+		int realaddress = 0x0080;
+		int data[] = new int[5];
+		try {
+		while (realaddress < file.length) {
+			String chrdata = "";
+			for (int i = 0; i < 5; i++) {
+				int d = 0;
+				if (realaddress + i < file.length) {
+					d = (int) file[realaddress + i] & 0xff;
+				}
+				data[i] = d;
+
+				if ((d > 0x1F) && (d < 0x7f)) {
+					chrdata = chrdata + (char) d;
+				} else {
+					chrdata = chrdata + "?";
+				}
+			}
+			// decode instruction
+			DecodedASM Instruction = asm.decode(data, loadedaddress);
+			// output it. - First, assemble a list of hex bytes, but pad out to 12 chars
+			// (4x3)
+			String hex = "";
+			for (int j = 0; j < Instruction.length; j++) {
+				hex = hex + toHexTwoDigit(data[j]) + " ";
+			}
+			while (hex.length() < 12) {
+				hex = hex + "   ";
+			}
+			sb.append("<tr><td>" + IntAndHex(loadedaddress) + "</td><td>" + hex + "</td><td>" 
+					+ Instruction.instruction + "</td><td>" + chrdata.substring(0, Instruction.length)
+					+ "</td></tr>\r\n");
+
+			realaddress = realaddress + Instruction.length;
+			loadedaddress = loadedaddress + Instruction.length;
+
+		} //while
+		} catch (Exception E) {
+			System.out.println("Error at: "+realaddress + "("+loadedaddress+")");
+			System.out.println(E.getMessage());
+			E.printStackTrace();
+		}
+		sb.append("</table>\r\n<br>\r\n");
+		
+
 	}
 
 }

@@ -400,7 +400,7 @@ public class AMSDiskWrapper {
 					newtrack.header = "Track-Info\r\n";
 					newtrack.tracknum = tracknum;
 					newtrack.side = headnum;
-					newtrack.gap3len = 0x42; ////////////////////////////////////
+					newtrack.gap3len = 0x4e; ////////////////////////////////////
 					newtrack.fillerByte = fillerbyte;
 					newtrack.minsectorID = minsector;
 					newtrack.maxsectorID = minsector + spt - 1;

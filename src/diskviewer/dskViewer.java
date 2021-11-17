@@ -2,7 +2,8 @@ package diskviewer;
 //features
 //TODO: Add basic file - Add variables into variable area?
 //TODO: Add char array
-//TODO: Add Number array
+//TODO: Add Number array 
+//TODO: Disassemble Sectors in non-Dos disks
 
 //bugs
 
@@ -15,6 +16,11 @@ package diskviewer;
 
 public class dskViewer {
 	
+	public static void main(String[] args) {
+		start(args);  
+	}
+	
+
 	public static void start(String[] args) {
 		boolean verbose = false;
 		for(int i=0;i<args.length;i++) {
@@ -29,9 +35,5 @@ public class dskViewer {
 		bmf.loop();
 	}
 
-	public static void main(String[] args) {
-		start(args);  
-	}
-	
 
 }
