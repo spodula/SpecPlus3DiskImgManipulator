@@ -17,10 +17,10 @@ public class PlusThreeDiskWrapper extends CPMDiskWrapper {
 	final int PLUS3ISSUE = 1;
 	final int PLUS3VERSION = 0;
 
-	final int BASIC_BASIC = 0x00;
-	final int BASIC_NUMARRAY = 0x01;
-	final int BASIC_CHRARRAY = 0x02;
-	final int BASIC_CODE = 0x03;
+	public static int BASIC_BASIC = 0x00;
+	public static int BASIC_NUMARRAY = 0x01;
+	public static int BASIC_CHRARRAY = 0x02;
+	public static int BASIC_CODE = 0x03;
 	final byte stdheader[] = { 'P', 'L', 'U', 'S', '3', 'D', 'O', 'S', 0x1a, PLUS3ISSUE, PLUS3VERSION };
 
 	/**

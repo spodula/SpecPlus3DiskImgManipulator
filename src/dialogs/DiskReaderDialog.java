@@ -5,6 +5,8 @@ package dialogs;
  * 
  */
 
+import java.io.File;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Button;
@@ -16,6 +18,8 @@ import org.eclipse.swt.widgets.Text;
 
 public class DiskReaderDialog extends Dialog {
 	public boolean VerboseMode = false;
+	
+	public String DefaultFolder="";
 	
 	public DiskReaderDialog(Shell parent) {
 		super(parent);
@@ -99,6 +103,14 @@ public class DiskReaderDialog extends Dialog {
 		}
 	}
 
+	/**
+	 * Return a checkbox.
+	 * 
+	 * @param parent
+	 * @param text
+	 * @param span
+	 * @return
+	 */
 	public Button GetCheckbox(Composite parent, String text, int span) {
 		Button editbox = new Button(parent, SWT.CHECK);
 		GridData data = new GridData(GridData.FILL_HORIZONTAL);
@@ -108,5 +120,35 @@ public class DiskReaderDialog extends Dialog {
 		return(editbox);
 	}
 
+	
+	/**
+	 * Check to see if a given string is numeric. 
+	 * @param strNum
+	 * @return
+	 */
+	public static boolean isNumeric(String strNum) {
+	    if (strNum == null) {
+	        return false;
+	    }
+	    try {
+	        Double.parseDouble(strNum);
+	    } catch (NumberFormatException nfe) {
+	        return false;
+	    }
+	    return true;
+	}
+	
+	/**
+	 * 
+	 * @param filename
+	 */
+	public void SetDefaultFolderFromFile(String filename) {
+		File f = new File(filename);
+		DefaultFolder = f.getParent();
+		if (!DefaultFolder.isBlank()) {
+			DefaultFolder = DefaultFolder + System.getProperty("file.separator");
+		}
+		System.out.println(DefaultFolder);
+	}
 	
 }

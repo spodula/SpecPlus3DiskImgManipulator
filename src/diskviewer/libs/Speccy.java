@@ -54,7 +54,7 @@ public class Speccy {
 		// number
 		System.out.print(" " + x + " ");
 		// output the encoded value
-		byte num[] = EncodeValue(x);
+		byte num[] = EncodeValue(x, false);
 		for (byte n : num) {
 			System.out.print(" " + (int) (n & 0xff));
 		}
@@ -149,7 +149,7 @@ public class Speccy {
 				result = String.valueOf(di);
 			}
 			//Get the encoded value and add it to the result. 
-			byte num[] = EncodeValue(d);
+			byte num[] = EncodeValue(d, false);
 			for (byte n : num) {
 				result = result + (char)n;
 			}
@@ -206,7 +206,7 @@ public class Speccy {
 	 * @param d number to encode
 	 * @return encoded 6 byte array
 	 */
-	private static byte[] EncodeValue(Double d) {
+	public static byte[] EncodeValue(Double d, boolean FloatInsteadOfNeg) {
 		// Get the sign of the number and flip it (Common to both int and float
 		// representation)
 		byte result[] = new byte[6];
@@ -214,7 +214,7 @@ public class Speccy {
 		boolean sign = (d < 0);
 
 		// check to see if we can encode as a 16 bit integer.
-		if ((d == Math.floor(d)) && (d < 65536) && (d > -65536)) {
+		if ((d == Math.floor(d)) &&  ((d < 65536) && (d > -65536) && !FloatInsteadOfNeg) || ((d > 0) && (d<65535))) {
 			// Encode as Integer
 			int di = d.intValue();
 			int base = 1;

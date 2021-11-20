@@ -32,6 +32,8 @@ public class FileSystemPage extends page {
 					+ "','12')\" style=\"width:200;height:40\">Add BASIC from ASCII</button>\r\n";
 			result = result + "<button type=\"button\" onclick=\"Fileop('" + filenum
 					+ "','13')\" style=\"width:200;height:40\">Add image as SCREEN$</button>\r\n";
+			result = result + "<button type=\"button\" onclick=\"Fileop('" + filenum
+					+ "','14')\" style=\"width:200;height:40\">Add CSV file as Numeric array</button>\r\n";
 
 			result = result + "<table>\r\n";
 

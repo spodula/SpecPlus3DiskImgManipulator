@@ -8,6 +8,7 @@ import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.MessageBox;
 
+import dialogs.NumericArrayDialog;
 import dialogs.RenameDialog;
 import dialogs.basicDialog;
 import dialogs.codeDialog;
@@ -18,6 +19,7 @@ import diskviewer.libs.disk.cpm.PlusThreeDiskWrapper;
 import diskviewer.pages.FilesPage;
 
 public class Fileop extends BrowserFunction {
+	public String LastFolder="";
 	public FilesPage FilesPage;
 	public PlusThreeDiskWrapper CurrentDisk;
 
@@ -88,34 +90,64 @@ public class Fileop extends BrowserFunction {
 			} else if (optype == 10) { // Add headerless file
 				headerlessFileDialog hfd = new headerlessFileDialog(this.getBrowser().getShell());
 				hfd.VerboseMode = VerboseMode;
+				hfd.DefaultFolder = LastFolder;
 				if (hfd.open()) {
-					if (CheckForExistingFile(hfd.NameOnDisk))
+					if (CheckForExistingFile(hfd.NameOnDisk)) {
 							CurrentDisk.AddHeaderlessFile(hfd.filename, hfd.NameOnDisk);
+					}
+					LastFolder = hfd.DefaultFolder;
 					FilesPage.filenum = CurrentDisk.DirectoryEntries.length; 
 				}
 			} else if (optype == 11) { // Add CODE file
 				codeDialog cd = new codeDialog(this.getBrowser().getShell());
 				cd.VerboseMode = VerboseMode;
+				cd.DefaultFolder = LastFolder;
+				
 				if (cd.open()) {
-					if (CheckForExistingFile(cd.NameOnDisk) )
-					CurrentDisk.AddRawCodeFile(cd.NameOnDisk, cd.address, cd.CodeAsBytes);
+					if (CheckForExistingFile(cd.NameOnDisk) ) {
+					  CurrentDisk.AddRawCodeFile(cd.NameOnDisk, cd.address, cd.CodeAsBytes);
+					}
+  				    LastFolder = cd.DefaultFolder;
 					FilesPage.filenum = CurrentDisk.DirectoryEntries.length; 
 				}
 			} else if (optype == 12) { // Add BASIC file
 				basicDialog bd = new basicDialog(this.getBrowser().getShell());
 				bd.VerboseMode = VerboseMode;
+				bd.DefaultFolder = LastFolder;
 				if (bd.open()) {
-					if (CheckForExistingFile(bd.NameOnDisk) )
-					CurrentDisk.AddBasicFile(bd.NameOnDisk, bd.BasicAsBytes, bd.StartLine, bd.BasicAsBytes.length);
+					LastFolder = bd.DefaultFolder;
+					if (CheckForExistingFile(bd.NameOnDisk) ) {
+						CurrentDisk.AddBasicFile(bd.NameOnDisk, bd.BasicAsBytes, bd.StartLine, bd.BasicAsBytes.length);
+					}
 					FilesPage.filenum = CurrentDisk.DirectoryEntries.length; 
 				}
+				FilesPage.filenum = CurrentDisk.DirectoryEntries.length; 
 			} else if (optype == 13) { // Add PNG as SCREEN$
 				screenDialog sd = new screenDialog(this.getBrowser().getShell());
 				sd.VerboseMode = VerboseMode;
+				sd.DefaultFolder = LastFolder;
 				if (sd.open()) {
-					if (CheckForExistingFile(sd.NameOnDisk) )
-					CurrentDisk.AddRawCodeFile(sd.NameOnDisk, 0x4000, sd.Screen);
+					LastFolder = sd.DefaultFolder;
+					if (CheckForExistingFile(sd.NameOnDisk) ) {
+						CurrentDisk.AddRawCodeFile(sd.NameOnDisk, 0x4000, sd.Screen);
+					}
 					FilesPage.filenum = CurrentDisk.DirectoryEntries.length; 
+				}
+			}else if (optype == 14) { // Add CSV as numeric Array.
+				NumericArrayDialog nad = new NumericArrayDialog(this.getBrowser().getShell());
+				nad.DefaultFolder = LastFolder;
+				nad.VerboseMode = VerboseMode;
+				if (nad.open()) {
+					if (CheckForExistingFile(nad.NameOnDisk) ) {
+						LastFolder = nad.DefaultFolder;
+						
+						int varname = ((int)nad.varname) - 0x60;
+						
+						varname = (varname & 0x1F) + 0x80;   
+						
+						CurrentDisk.AddPlusThreeFile(nad.NameOnDisk, nad.ArrayAsBytes , varname*0x100, 0, PlusThreeDiskWrapper.BASIC_NUMARRAY);
+						
+					}
 				}
 			}
 

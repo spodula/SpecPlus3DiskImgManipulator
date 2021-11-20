@@ -313,7 +313,7 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 								IsValidCPMFileStructure = false;
 							}
 							// Check the rest of the characters
-							if (!CPM.CharIsCPMValid(c))
+							if (!CPM.CharIsCPMValid(c) && c!=' ')
 								IsValidCPMFileStructure = false;
 						}
 					}

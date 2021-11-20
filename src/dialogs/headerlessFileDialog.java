@@ -76,10 +76,12 @@ public class headerlessFileDialog extends DiskReaderDialog {
 			public void widgetDefaultSelected(SelectionEvent event) {
 				FileDialog fd = new FileDialog(dialog, SWT.OPEN);
 				fd.setText("Select file to add");
+				fd.setFilterPath(DefaultFolder);
 				fd.setFilterExtensions(new String[] { "*.*" });
 				fd.setFileName("");
 				String selected = fd.open();
 				if (!selected.isBlank()) {
+					SetDefaultFolderFromFile( selected );
 					FileNameEdit.setText(selected);
 					File f = new File(selected);
 

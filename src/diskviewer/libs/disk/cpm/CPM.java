@@ -55,7 +55,7 @@ public class CPM {
 	 * @return
 	 */
 	
-	public static String Validchars = "ABCDEFGHIJKLMNOPQRSTUVQXYZ 0123456789 \"#$'@^_{}~`_";
+	public static String Validchars = "ABCDEFGHIJKLMNOPQRSTUVQXYZ0123456789\"#$'@^_{}~`_";
 	
 	public static boolean CharIsCPMValid(char c) {
 		boolean found = false;

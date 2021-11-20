@@ -63,7 +63,7 @@ public class codeDialog extends DiskReaderDialog {
 		Shell parent = getParent();
 		Shell dialog = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
 		dialog.setSize(500, 230);
-		dialog.setText("Add file");
+		dialog.setText("Add a CODE file");
 		dialog.setLayout(new GridLayout(4, false));
 
 		Composite cp = new Composite(dialog, SWT.NONE);
@@ -96,10 +96,12 @@ public class codeDialog extends DiskReaderDialog {
 			public void widgetDefaultSelected(SelectionEvent event) {
 				FileDialog fd = new FileDialog(dialog, SWT.OPEN);
 				fd.setText("Select file to add");
+				fd.setFilterPath(DefaultFolder);
 				fd.setFilterExtensions(new String[] { "*.*" });
 				fd.setFileName("");
 				String selected = fd.open();
 				if (!selected.isBlank()) {
+					SetDefaultFolderFromFile( selected );
 					FileNameEdit.setText(selected);
 					File f = new File(selected);
 					TextLen.setText(String.valueOf(f.length()));

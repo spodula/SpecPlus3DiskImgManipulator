@@ -68,7 +68,7 @@ public class SearchDialog extends DiskReaderDialog {
 		Shell parent = getParent();
 		dialog = new Shell(parent, SWT.DIALOG_TRIM);
 		dialog.setSize(500, 400);
-		dialog.setText("Add file");
+		dialog.setText("Search");
 		dialog.setLayout(new GridLayout(5, false));
 
 		Composite cp = new Composite(dialog, SWT.NONE);
