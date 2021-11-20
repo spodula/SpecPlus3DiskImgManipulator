@@ -1,4 +1,8 @@
 package dialogs;
+/**
+ * Dialog for adding a character array to the disk. 
+ * Will probably never be used (As its easier to add a text file as a CODE file), but here for consistency. 
+ */
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -25,18 +29,17 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 
-import diskviewer.libs.Speccy;
 import diskviewer.libs.disk.cpm.CPM;
 
-public class NumericArrayDialog extends DiskReaderDialog {
+public class CharacterArrayDialog extends DiskReaderDialog {
 	// Filename of the source file
 	public String filename = "";
 
 	// Filename of the file on the disk.
 	public String NameOnDisk = "";
-	
-	//variable name
-	public char varname='F';
+
+	// variable name
+	public char varname = 'F';
 
 	// The listview used for the basic program on the form.
 	private Table arraylist = null;
@@ -50,10 +53,10 @@ public class NumericArrayDialog extends DiskReaderDialog {
 	// flag to mark if we should exit or not.
 	public boolean IsOk = false;
 
-	//Max number of items in the second dimension. (horizontal)
+	// Max number of items in the second dimension. (horizontal)
 	private int maxdim2 = 1;
 
-	//File storage.  
+	// File storage.
 	private ArrayList<String> lines = new ArrayList<String>();
 
 	/**
@@ -61,7 +64,7 @@ public class NumericArrayDialog extends DiskReaderDialog {
 	 * 
 	 * @param parent
 	 */
-	public NumericArrayDialog(Shell parent) {
+	public CharacterArrayDialog(Shell parent) {
 		super(parent);
 	}
 
@@ -85,7 +88,7 @@ public class NumericArrayDialog extends DiskReaderDialog {
 		cp.setLayoutData(data);
 		cp.setLayout(new GridLayout(1, false));
 
-		Label label = GetLabel(cp, "Add a Numeric array.", 1);
+		Label label = GetLabel(cp, "Add a Text file as a char array.", 1);
 		FontData fontData = label.getFont().getFontData()[0];
 		Font font = new Font(dialog.getDisplay(),
 				new FontData(fontData.getName(), fontData.getHeight() + 4, SWT.BOLD | SWT.ITALIC));
@@ -97,7 +100,7 @@ public class NumericArrayDialog extends DiskReaderDialog {
 
 		GetLabel(dialog, "Var Name.", 2);
 		Text VarNameEdit = GetText(dialog, "X", 1);
-		Label VarSizeLabel = GetLabel(dialog, "(x,x)", 1);
+		Label VarSizeLabel = GetLabel(dialog, "$(x,x)", 1);
 
 		arraylist = new Table(dialog, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
 		data = new GridData();
@@ -152,7 +155,7 @@ public class NumericArrayDialog extends DiskReaderDialog {
 			public void widgetDefaultSelected(SelectionEvent event) {
 				filename = FileNameEdit.getText();
 				NameOnDisk = DiskName.getText();
-				varname = (VarNameEdit.getText()+"X").toUpperCase().charAt(0);
+				varname = (VarNameEdit.getText() + "X").toUpperCase().charAt(0);
 				IsOk = true;
 				AssembleArrayData();
 
@@ -187,12 +190,10 @@ public class NumericArrayDialog extends DiskReaderDialog {
 	/**
 	 * Update the table from the current loaded file.
 	 * 
-	 * @param dialog - The main form
+	 * @param dialog       - The main form
 	 * @param VarNameLabel - the variable label so we can set (X,X) values
 	 */
 	private void DisplayWithCurrentSettings(Shell dialog, Label VarNameLabel) {
-		Color red = dialog.getDisplay().getSystemColor(SWT.COLOR_RED);
-		boolean FirstLineHeader = false;
 		// clear table
 		arraylist.setHeaderVisible(true);
 		arraylist.removeAll();
@@ -201,44 +202,43 @@ public class NumericArrayDialog extends DiskReaderDialog {
 			arraylist.getColumn(0).dispose();
 		}
 
-		// get second dimension from the file. 
+		// get second dimension from the file.
 		maxdim2 = 1;
 		for (String line : lines) {
-			String columns[] = SplitLine(line, ", \t");
-			if (columns.length > maxdim2)
-				maxdim2 = columns.length;
+			if (line.length() > maxdim2)
+				maxdim2 = line.length();
 		}
 		log("Number of columns is: " + maxdim2);
+		if (maxdim2 > 255) {
+			maxdim2 = 255;
+			log("Truncated to 255");
+		}
 
 		// Set the headers.
-		String columns[] = SplitLine(lines.get(0), ", \t");
 		for (int i = 0; i < maxdim2; i++) {
 			String s = String.valueOf("#" + (i + 1));
-			if (FirstLineHeader) {
-				if (i < columns.length) {
-					s = columns[i];
-				}
-			}
 			TableColumn column = new TableColumn(arraylist, SWT.NULL);
 			column.setText(s);
 		}
-		// get the first line number.
-		int startline = 0;
-		if (FirstLineHeader) {
-			startline = 1;
-		}
 
 		// for each line
-		for (int i = startline; i < lines.size(); i++) {
-			String linedata[] = SplitLine(lines.get(i), ", \t"); // split line
+		for (int i = 0; i < lines.size(); i++) {
+			String line = lines.get(i);
+			if (line.length() > 255) {
+				line = line.substring(0, 255);
+			}
+
+			// pad line out to at least 255.
+			line = line + "                                                                "
+					+ "                                                                "
+					+ "                                                                "
+					+ "                                                                ";
+
 			// add to table
 			TableItem item = new TableItem(arraylist, SWT.NULL);
-			for (int col = 0; col < linedata.length; col++) {
-				String data = linedata[col];
+			for (int col = 0; col < line.length(); col++) {
+				String data = "" + line.charAt(col);
 				item.setText(col, data);
-				if (!isNumeric(data)) {
-					item.setForeground(col, red);
-				}
 			}
 		} // end for
 
@@ -251,54 +251,6 @@ public class NumericArrayDialog extends DiskReaderDialog {
 		}
 
 		VarNameLabel.setText(s + ")");
-	}
-
-	/**
-	 * very basic parser. Will take into account quotes. 
-	 *
-	 * @param line - Line to split
-	 * @param splitby - list of characters to use as delimiters
-	 * @return  - Array of strings.
-	 */
-	private String[] SplitLine(String line, String splitby) {
-		ArrayList<String> al = new ArrayList<String>();
-		String curritem = "";
-		boolean InQuotes = false;
-		for (int i = 0; i < line.length(); i++) {
-			char c = line.charAt(i);
-			if (InQuotes) {
-				if (c == '"') {
-					InQuotes = false;
-					if (!curritem.isEmpty()) {
-						al.add(curritem);
-						curritem = "";
-					}
-				} else {
-					curritem = curritem + c;
-				}
-			} else {
-				if (c == '"') {
-					InQuotes = true;
-					if (!curritem.isEmpty()) {
-						al.add(curritem);
-						curritem = "";
-					}
-				} else {
-					if (splitby.indexOf(c) > -1) {
-						if (!curritem.isEmpty()) {
-							al.add(curritem);
-							curritem = "";
-						}
-					} else {
-						curritem = curritem + c;
-					}
-
-				}
-			}
-		}
-
-		String result[] = line.split(",");
-		return result;
 	}
 
 	/**
@@ -332,61 +284,51 @@ public class NumericArrayDialog extends DiskReaderDialog {
 	}
 
 	/**
-	 * Assemble the data into a byte array. We are limited to 1 or 2 dimensions. 
-	 * This is a limitation of the CSV files. 
+	 * Assemble the data into a data array. We are limited to 1 or 2 dimensions.
+	 * This is a limitation of the CSV files.
 	 * 
-	 * Format of the file is:
-	 * 0: number of dimensions.
-	 * 01-02: Dimension 1 size
-	 * [03-04]: Dimension 2 size if applicable. 
-	 * (5 bytes): FP number for (1[,1])
-	 * (5 bytes): FP number for (2[,1])
-	 * .....
-	 * (5 bytes): FP number for (N[,1])
-	 * (5 bytes): FP number for (1[,2]) 
+	 * Format of the file is: 0: number of dimensions. 01-02: Dimension 1 size
+	 * [03-04]: Dimension 2 size if applicable. (1 byte): char for (1[,1]) (1 byte):
+	 * char for (2[,1]) ..... (1 byte): char for (N[,1]) (1 byte): char for (1[,2])
 	 * 
 	 */
 	private void AssembleArrayData() {
-		//number of diumensions.
-		int dimensions=1;
-		if(maxdim2 > 1) {
+		// number of diumensions. For char arrays, probably two.
+		int dimensions = 1;
+		if (maxdim2 > 1) {
 			dimensions = 2;
 		}
-		
-		int arraysize = (maxdim2 * lines.size() * 5) + (dimensions*2) + 1;
-		System.out.println("Calcsize:  "+arraysize);
+
+		// dimensions. ((X * Y) Data) + 2 bytes for each dimension + 1 for dimension no.
+		int arraysize = (maxdim2 * lines.size()) + (dimensions * 2) + 1;
+		System.out.println("calculate file size:  " + arraysize);
 		ArrayAsBytes = new byte[arraysize];
-		
-		//dimensions.
-		
-		int ptr=1;
-		//Each dimension.
+		int ptr = 1;
+
+		// Each dimension.
 		ArrayAsBytes[ptr++] = (byte) (lines.size() & 0xff);
 		ArrayAsBytes[ptr++] = (byte) (lines.size() / 0x100);
 		ArrayAsBytes[0] = 1;
-		if (maxdim2>1) {
+		if (maxdim2 > 1) {
 			ArrayAsBytes[0] = 2;
-			ArrayAsBytes[ptr++] = (byte) (maxdim2 & 0xff);			
+			ArrayAsBytes[ptr++] = (byte) (maxdim2 & 0xff);
 			ArrayAsBytes[ptr++] = (byte) (maxdim2 / 0x100);
 		}
-		
-		//for each item.
-		for (int dim1 = 0; dim1 < lines.size();dim1++) {
-			String line = lines.get(dim1);
-			String numbers[] = SplitLine(line, ", \t");
-			for (int dim2 = 0; dim2 < maxdim2;dim2++) {
-				String sNumber = numbers[dim2];
-				if (!isNumeric(sNumber)) {
-					sNumber = "0";
-				}
-				Double number = Double.valueOf(sNumber);
-				byte[] newnum = Speccy.EncodeValue(number, true);
-				for(int i=1;i<newnum.length;i++) {
-					ArrayAsBytes[ptr++] = newnum[i]; 
-				}
+
+		// for each item.
+		for (int dim1 = 0; dim1 < lines.size(); dim1++) {
+			// pad line to at least 255 characters
+			String line = lines.get(dim1) + "                                                                "
+					+ "                                                                "
+					+ "                                                                "
+					+ "                                                                ";
+			// write string to the array
+			for (int dim2 = 0; dim2 < maxdim2; dim2++) {
+				char c = line.charAt(dim2);
+				ArrayAsBytes[ptr++] = (byte) c;
 			}
 		}
-		System.out.println("final ptr: "+ptr);
+		System.out.println("final ptr: " + ptr);
 	}
 
 }

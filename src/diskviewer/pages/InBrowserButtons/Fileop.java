@@ -8,6 +8,7 @@ import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.MessageBox;
 
+import dialogs.CharacterArrayDialog;
 import dialogs.NumericArrayDialog;
 import dialogs.RenameDialog;
 import dialogs.basicDialog;
@@ -19,7 +20,7 @@ import diskviewer.libs.disk.cpm.PlusThreeDiskWrapper;
 import diskviewer.pages.FilesPage;
 
 public class Fileop extends BrowserFunction {
-	public String LastFolder="";
+	public String LastFolder = "";
 	public FilesPage FilesPage;
 	public PlusThreeDiskWrapper CurrentDisk;
 
@@ -36,7 +37,7 @@ public class Fileop extends BrowserFunction {
 		if (filenum > 0) {
 			defaultFileName = FilesPage.LastDisk.DirectoryEntries[filenum - 1].filename();
 		}
-		boolean VerboseMode = CurrentDisk.VerboseMode;		
+		boolean VerboseMode = CurrentDisk.VerboseMode;
 
 		try {
 			if (optype == 1 || optype == 2) { // extract file without +3dos header (1) with +3dos header (2)
@@ -93,22 +94,22 @@ public class Fileop extends BrowserFunction {
 				hfd.DefaultFolder = LastFolder;
 				if (hfd.open()) {
 					if (CheckForExistingFile(hfd.NameOnDisk)) {
-							CurrentDisk.AddHeaderlessFile(hfd.filename, hfd.NameOnDisk);
+						CurrentDisk.AddHeaderlessFile(hfd.filename, hfd.NameOnDisk);
 					}
 					LastFolder = hfd.DefaultFolder;
-					FilesPage.filenum = CurrentDisk.DirectoryEntries.length; 
+					FilesPage.filenum = CurrentDisk.DirectoryEntries.length;
 				}
 			} else if (optype == 11) { // Add CODE file
 				codeDialog cd = new codeDialog(this.getBrowser().getShell());
 				cd.VerboseMode = VerboseMode;
 				cd.DefaultFolder = LastFolder;
-				
+
 				if (cd.open()) {
-					if (CheckForExistingFile(cd.NameOnDisk) ) {
-					  CurrentDisk.AddRawCodeFile(cd.NameOnDisk, cd.address, cd.CodeAsBytes);
+					if (CheckForExistingFile(cd.NameOnDisk)) {
+						CurrentDisk.AddRawCodeFile(cd.NameOnDisk, cd.address, cd.CodeAsBytes);
 					}
-  				    LastFolder = cd.DefaultFolder;
-					FilesPage.filenum = CurrentDisk.DirectoryEntries.length; 
+					LastFolder = cd.DefaultFolder;
+					FilesPage.filenum = CurrentDisk.DirectoryEntries.length;
 				}
 			} else if (optype == 12) { // Add BASIC file
 				basicDialog bd = new basicDialog(this.getBrowser().getShell());
@@ -116,37 +117,49 @@ public class Fileop extends BrowserFunction {
 				bd.DefaultFolder = LastFolder;
 				if (bd.open()) {
 					LastFolder = bd.DefaultFolder;
-					if (CheckForExistingFile(bd.NameOnDisk) ) {
+					if (CheckForExistingFile(bd.NameOnDisk)) {
 						CurrentDisk.AddBasicFile(bd.NameOnDisk, bd.BasicAsBytes, bd.StartLine, bd.BasicAsBytes.length);
 					}
-					FilesPage.filenum = CurrentDisk.DirectoryEntries.length; 
+					FilesPage.filenum = CurrentDisk.DirectoryEntries.length;
 				}
-				FilesPage.filenum = CurrentDisk.DirectoryEntries.length; 
+				FilesPage.filenum = CurrentDisk.DirectoryEntries.length;
 			} else if (optype == 13) { // Add PNG as SCREEN$
 				screenDialog sd = new screenDialog(this.getBrowser().getShell());
 				sd.VerboseMode = VerboseMode;
 				sd.DefaultFolder = LastFolder;
 				if (sd.open()) {
 					LastFolder = sd.DefaultFolder;
-					if (CheckForExistingFile(sd.NameOnDisk) ) {
+					if (CheckForExistingFile(sd.NameOnDisk)) {
 						CurrentDisk.AddRawCodeFile(sd.NameOnDisk, 0x4000, sd.Screen);
 					}
-					FilesPage.filenum = CurrentDisk.DirectoryEntries.length; 
+					FilesPage.filenum = CurrentDisk.DirectoryEntries.length;
 				}
-			}else if (optype == 14) { // Add CSV as numeric Array.
+			} else if (optype == 14) { // Add CSV as numeric Array.
 				NumericArrayDialog nad = new NumericArrayDialog(this.getBrowser().getShell());
 				nad.DefaultFolder = LastFolder;
 				nad.VerboseMode = VerboseMode;
 				if (nad.open()) {
-					if (CheckForExistingFile(nad.NameOnDisk) ) {
+					if (CheckForExistingFile(nad.NameOnDisk)) {
 						LastFolder = nad.DefaultFolder;
-						
-						int varname = ((int)nad.varname) - 0x60;
-						
-						varname = (varname & 0x1F) + 0x80;   
-						
-						CurrentDisk.AddPlusThreeFile(nad.NameOnDisk, nad.ArrayAsBytes , varname*0x100, 0, PlusThreeDiskWrapper.BASIC_NUMARRAY);
-						
+						int varname = ((int) nad.varname) - 0x60;
+						varname = (varname & 0x1F) + 0x80;
+						CurrentDisk.AddPlusThreeFile(nad.NameOnDisk, nad.ArrayAsBytes, varname * 0x100, 0,
+								PlusThreeDiskWrapper.BASIC_NUMARRAY);
+
+					}
+
+				}
+			} else if (optype == 15) {
+				CharacterArrayDialog cad = new CharacterArrayDialog(this.getBrowser().getShell());
+				cad.DefaultFolder = LastFolder;
+				cad.VerboseMode = VerboseMode;
+				if (cad.open()) {
+					if (CheckForExistingFile(cad.NameOnDisk)) {
+						LastFolder = cad.DefaultFolder;
+						int varname = ((int) cad.varname) - 0x60;
+						varname = (varname & 0x1F) + 0x80;
+						CurrentDisk.AddPlusThreeFile(cad.NameOnDisk, cad.ArrayAsBytes, varname * 0x100, 0,
+								PlusThreeDiskWrapper.BASIC_CHRARRAY);
 					}
 				}
 			}
@@ -176,36 +189,36 @@ public class Fileop extends BrowserFunction {
 			dialog.setMessage("File " + filename + " exists on the disk. \r\n"
 					+ "Abort, Retry (Renaming old file), Ignore (Overwrite file)");
 			int result = dialog.open();
-			if (result == SWT.ABORT) { 
-				return(false);
+			if (result == SWT.ABORT) {
+				return (false);
 			} else if (result == SWT.IGNORE) {
 				CurrentDisk.GetDirectoryEntry(filename).SetDeleted(true);
-				return(true);
-			}  else if (result == SWT.RETRY) {
+				return (true);
+			} else if (result == SWT.RETRY) {
 				String fname = filename;
-				String extention="";
-				//remove the extension.
-				int i=fname.indexOf('.');
-				if (i>-1) {
+				String extention = "";
+				// remove the extension.
+				int i = fname.indexOf('.');
+				if (i > -1) {
 					fname = fname.substring(0, i);
-				} 
-				//default extension
+				}
+				// default extension
 				extention = "BAK";
-				
-				//loop through until we get a file that doesnt exist. 
-				int bknum=1;
-				while (CurrentDisk.GetDirectoryEntry(fname+"."+extention) != null) {
-					if (bknum<10) {
-						extention = "BK"+String.valueOf(bknum++);
+
+				// loop through until we get a file that doesnt exist.
+				int bknum = 1;
+				while (CurrentDisk.GetDirectoryEntry(fname + "." + extention) != null) {
+					if (bknum < 10) {
+						extention = "BK" + String.valueOf(bknum++);
 					} else {
-						extention = "B"+String.valueOf(bknum++);
+						extention = "B" + String.valueOf(bknum++);
 					}
 				}
-				
-				CurrentDisk.GetDirectoryEntry(filename).RenameTo(fname+"."+extention);
-				return(true);
+
+				CurrentDisk.GetDirectoryEntry(filename).RenameTo(fname + "." + extention);
+				return (true);
 			}
-		} 
+		}
 		return (true);
 	}
 

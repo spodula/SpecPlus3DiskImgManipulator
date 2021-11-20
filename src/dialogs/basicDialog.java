@@ -486,7 +486,7 @@ public class basicDialog extends DiskReaderDialog {
 	 * Is the character part of a number?
 	 * 
 	 * @param chr
-	 * @return
+	 * @return TRUE if number 0-9 or -
 	 */
 	private boolean IsNumber(char chr) {
 		String numbers = "0123456789.";
@@ -495,8 +495,9 @@ public class basicDialog extends DiskReaderDialog {
 
 	/**
 	 * Is the character a logical or math operator?
+	 * 
 	 * @param chr
-	 * @return
+	 * @return TRUE if an operator character
 	 */
 	private boolean IsOperator(char chr) {
 		String operators = "()+-/*<>&=";
@@ -507,7 +508,7 @@ public class basicDialog extends DiskReaderDialog {
 	 * Is the character something used to separate statements?
 	 * 
 	 * @param chr
-	 * @return
+	 * @return TRUE if a seperator character
 	 */
 	private boolean IsSeperator(char chr) {
 		String seperators = ":, ";
