@@ -17,6 +17,7 @@ Adding of:
   * BASIC files (from a text file)
   * CODE files
   * Screen files, from GIF, JPG, PNG -> screen$ files
+  * Numeric and character arrays
 
 # Building: 
 Supports Win64 and Linux x86_64 platforms. You may be able to build others by changing the reference in the POM. 
