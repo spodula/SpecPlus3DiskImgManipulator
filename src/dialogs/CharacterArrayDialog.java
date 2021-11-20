@@ -259,21 +259,22 @@ public class CharacterArrayDialog extends DiskReaderDialog {
 	 * @param FileToLoad
 	 */
 	private void LoadArrayFromFile(File FileToLoad) {
+		int FileLimit = 10000;
 		lines.clear();
 		try {
 			int numlines = 0;
 			String line;
 			BufferedReader br = new BufferedReader(new FileReader(FileToLoad));
 			try {
-				while (((line = br.readLine()) != null) && numlines < 255) {
+				while (((line = br.readLine()) != null) && numlines < FileLimit) {
 					lines.add(line);
 					numlines++;
 				}
 			} finally {
 				br.close();
 			}
-			if (numlines == 255) {
-				System.out.println("Load stopped at 255 lines. Too large");
+			if (numlines == FileLimit) {
+				System.out.println("Load stopped at "+FileLimit+" lines. Too large");
 			} else {
 				System.out.println("Loaded " + numlines + " lines.");
 			}
