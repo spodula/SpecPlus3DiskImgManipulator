@@ -1,6 +1,7 @@
 package diskviewer;
 //features
 //TODO: Add basic file - Add variables into variable area?
+//TODO: add a disk building option.
 
 //bugs
 
