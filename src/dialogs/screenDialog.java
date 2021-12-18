@@ -49,7 +49,7 @@ public class screenDialog extends DiskReaderDialog {
 	private BufferedImage RawImage = null;
 
 	// black and white flag.
-	private boolean isBW = false;
+	public boolean isBW = false;
 
 	// Raw scaled and converted image to be saved to the disk.
 	public byte[] Screen = new byte[6912];
@@ -62,15 +62,26 @@ public class screenDialog extends DiskReaderDialog {
 		super(parent);
 	}
 
+	//File name edit component
+	private Text FileNameEdit = null;
+	
+	//Name on disk edit component;
+	private Text NameOnDiskEdit = null;
+
+	//Button
+	private Button BtnSelFile = null;
+	
+	//Dialog
+	public Shell dialog = null;
+	
 	/**
 	 * Create and display the dialog.
 	 * 
 	 * @return
 	 */
-	public boolean open() {
+	public void init() {
 		IsOk = false;
-		Shell parent = getParent();
-		Shell dialog = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
+		dialog = new Shell(getParent(), SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
 		dialog.setSize(800, 500);
 		dialog.setText("Add an image file");
 		dialog.setLayout(new GridLayout(4, false));
@@ -88,7 +99,7 @@ public class screenDialog extends DiskReaderDialog {
 				new FontData(fontData.getName(), fontData.getHeight() + 4, SWT.BOLD | SWT.ITALIC));
 		label.setFont(font);
 
-		Button BtnSelFile = new Button(dialog, SWT.BORDER);
+		BtnSelFile = new Button(dialog, SWT.BORDER);
 		data = new GridData();
 		data.horizontalSpan = 1;
 		data.verticalSpan = 6;
@@ -100,9 +111,9 @@ public class screenDialog extends DiskReaderDialog {
 		BtnSelFile.setImage(image);
 
 		GetLabel(dialog, "Source file", 3);
-		Text FileNameEdit = GetText(dialog, "", 3);
+		FileNameEdit = GetText(dialog, "", 3);
 		GetLabel(dialog, "Name on disk", 3);
-		Text NameOnDiskEdit = GetText(dialog, "", 3);
+		NameOnDiskEdit = GetText(dialog, "", 3);
 		GetLabel(dialog, "Black/white?", 1);
 		Button BtnIsBW = GetCheckbox(dialog, "", 1);
 		GetLabel(dialog, "", 1);
@@ -150,38 +161,10 @@ public class screenDialog extends DiskReaderDialog {
 				fd.setFilterExtensions(new String[] { "*.*" });
 				String selected = fd.open();
 				if (!selected.isBlank()) {
-					SetDefaultFolderFromFile( selected );
-					FileNameEdit.setText(selected);
-					File f = new File(selected);
-
-					String fname = f.getName().toUpperCase();
-					String filename = "";
-					String extension = "";
-					if (fname.contains(".")) {
-						int i = fname.lastIndexOf(".");
-						extension = fname.substring(i + 1);
-						filename = fname.substring(0, i);
-					} else {
-						filename = fname;
-					}
-					filename = filename + "        ";
-					filename = CPM.FixFilePart(filename.substring(0, 8).trim());
-
-					extension = extension + "   ";
-					extension = CPM.FixFilePart(extension.substring(0, 3).trim());
-					// NameOnDisk
-					NameOnDiskEdit.setText(filename + "." + extension);
-
-					try {
-						RawImage = ImageIO.read(new File(selected));
-
-						BtnSelFile.setImage(ScaleImage(dialog.getDisplay(), 192));
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-
+				   LoadFile(selected);
 				}
 			}
+
 		});
 
 		Button BtnOK = GetButton(dialog, "Add", GridData.FILL);
@@ -211,9 +194,12 @@ public class screenDialog extends DiskReaderDialog {
 				dialog.dispose();
 			}
 		});
+	}
 
+	public boolean open() {
+		init();
 		dialog.open();
-		Display display = parent.getDisplay();
+		Display display = getParent().getDisplay();
 		while (!dialog.isDisposed()) {
 			if (!display.readAndDispatch())
 				display.sleep();
@@ -221,6 +207,7 @@ public class screenDialog extends DiskReaderDialog {
 
 		return (IsOk);
 	}
+	
 
 	/**
 	 * Scale the loaded image to 256x192 into a new image, run the speccy display conversion, 
@@ -524,5 +511,44 @@ public class screenDialog extends DiskReaderDialog {
 		}
 		return null;
 	}
+	
+	/**
+	 * Load the file
+	 * @param selected
+	 */
+	public void LoadFile(String selected) {
+		SetDefaultFolderFromFile( selected );
+		FileNameEdit.setText(selected);
+		File f = new File(selected);
+
+		String fname = f.getName().toUpperCase();
+		String filename = "";
+		String extension = "";
+		if (fname.contains(".")) {
+			int i = fname.lastIndexOf(".");
+			extension = fname.substring(i + 1);
+			filename = fname.substring(0, i);
+		} else {
+			filename = fname;
+		}
+		filename = filename + "        ";
+		filename = CPM.FixFilePart(filename.substring(0, 8).trim());
+
+		extension = extension + "   ";
+		extension = CPM.FixFilePart(extension.substring(0, 3).trim());
+		// NameOnDisk
+		NameOnDisk = filename + "." + extension;
+		NameOnDiskEdit.setText( NameOnDisk );
+
+		try {
+			RawImage = ImageIO.read(new File(selected));
+
+			BtnSelFile.setImage(ScaleImage(dialog.getDisplay(), 192));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
 
 }

@@ -65,7 +65,7 @@ public class NewDiskDialog extends DiskReaderDialog {
 		}
 	}
 	
-	private static disktype physicaldisks[] = {
+	public static disktype physicaldisks[] = {
 			new disktype("CF/2 180k Disk (40 tracks 1 head 9 sectors) Spectrum +3/PCW type 3",          9,1,40,"MV - CPCEMU Disk-File\r\nDisk-Info\r\n", false,1,2,1,3,42,82,(byte)0xe5,"00 00 28 09 02 01 03 02 2A 52",(byte)0),
 			new disktype("CF/2 180k Disk (40 tracks 1 head 9 sectors) EXTENDED Spectrum +3/PCW type 3", 9,1,40,"EXTENDED CPC DSK File\r\nDisk-Info\r\n", true,1,2,1,3,42,82,(byte)0xe5,"00 00 28 09 02 01 03 02 2A 52",(byte)0)
 	};

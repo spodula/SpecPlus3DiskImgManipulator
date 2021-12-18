@@ -27,6 +27,7 @@ import org.eclipse.swt.widgets.Text;
 
 import diskviewer.libs.Speccy;
 import diskviewer.libs.disk.cpm.CPM;
+import diskviewer.libs.general;
 
 public class NumericArrayDialog extends DiskReaderDialog {
 	// Filename of the source file
@@ -56,6 +57,7 @@ public class NumericArrayDialog extends DiskReaderDialog {
 	//File storage.  
 	private ArrayList<String> lines = new ArrayList<String>();
 
+	private Shell dialog=null; 
 	/**
 	 * constructor
 	 * 
@@ -70,9 +72,9 @@ public class NumericArrayDialog extends DiskReaderDialog {
 	 * 
 	 * @return
 	 */
-	public boolean open() {
+	public void init() {
 		Shell parent = getParent();
-		Shell dialog = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
+		dialog = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
 		dialog.setSize(700, 500);
 		dialog.setText("Add Numeric array");
 		dialog.setLayout(new GridLayout(4, false));
@@ -173,9 +175,13 @@ public class NumericArrayDialog extends DiskReaderDialog {
 				dialog.dispose();
 			}
 		});
+	}
+
+	public boolean open() {
+		init();
 
 		dialog.open();
-		Display display = parent.getDisplay();
+		Display display = dialog.getDisplay();
 		while (!dialog.isDisposed()) {
 			if (!display.readAndDispatch())
 				display.sleep();
@@ -236,7 +242,7 @@ public class NumericArrayDialog extends DiskReaderDialog {
 			for (int col = 0; col < linedata.length; col++) {
 				String data = linedata[col];
 				item.setText(col, data);
-				if (!isNumeric(data)) {
+				if (!general.isNumeric(data)) {
 					item.setForeground(col, red);
 				}
 			}
@@ -306,7 +312,7 @@ public class NumericArrayDialog extends DiskReaderDialog {
 	 * 
 	 * @param FileToLoad
 	 */
-	private void LoadArrayFromFile(File FileToLoad) {
+	public void LoadArrayFromFile(File FileToLoad) {
 		int FileLimit = 10000;
 		lines.clear();
 		try {
@@ -347,7 +353,7 @@ public class NumericArrayDialog extends DiskReaderDialog {
 	 * (5 bytes): FP number for (1[,2]) 
 	 * 
 	 */
-	private void AssembleArrayData() {
+	public void AssembleArrayData() {
 		//number of diumensions.
 		int dimensions=1;
 		if(maxdim2 > 1) {
@@ -377,7 +383,7 @@ public class NumericArrayDialog extends DiskReaderDialog {
 			String numbers[] = SplitLine(line, ", \t");
 			for (int dim2 = 0; dim2 < maxdim2;dim2++) {
 				String sNumber = numbers[dim2];
-				if (!isNumeric(sNumber)) {
+				if (!general.isNumeric(sNumber)) {
 					sNumber = "0";
 				}
 				Double number = Double.valueOf(sNumber);

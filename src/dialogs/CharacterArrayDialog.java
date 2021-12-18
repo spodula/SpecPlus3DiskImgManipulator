@@ -54,11 +54,13 @@ public class CharacterArrayDialog extends DiskReaderDialog {
 	public boolean IsOk = false;
 
 	// Max number of items in the second dimension. (horizontal)
-	private int maxdim2 = 1;
+	public int maxdim2 = 1;
 
 	// File storage.
-	private ArrayList<String> lines = new ArrayList<String>();
+	public ArrayList<String> lines = new ArrayList<String>();
 
+	//dialog shell.
+	private Shell dialog = null;
 	/**
 	 * constructor
 	 * 
@@ -73,9 +75,9 @@ public class CharacterArrayDialog extends DiskReaderDialog {
 	 * 
 	 * @return
 	 */
-	public boolean open() {
+	public void init() {
 		Shell parent = getParent();
-		Shell dialog = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
+		dialog = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
 		dialog.setSize(700, 500);
 		dialog.setText("Add Numeric array");
 		dialog.setLayout(new GridLayout(4, false));
@@ -176,9 +178,12 @@ public class CharacterArrayDialog extends DiskReaderDialog {
 				dialog.dispose();
 			}
 		});
-
+	}
+	
+	public boolean open() {
+		init();
 		dialog.open();
-		Display display = parent.getDisplay();
+		Display display = dialog.getDisplay();
 		while (!dialog.isDisposed()) {
 			if (!display.readAndDispatch())
 				display.sleep();
@@ -203,16 +208,8 @@ public class CharacterArrayDialog extends DiskReaderDialog {
 		}
 
 		// get second dimension from the file.
-		maxdim2 = 1;
-		for (String line : lines) {
-			if (line.length() > maxdim2)
-				maxdim2 = line.length();
-		}
+		CalcMaxDim();
 		log("Number of columns is: " + maxdim2);
-		if (maxdim2 > 255) {
-			maxdim2 = 255;
-			log("Truncated to 255");
-		}
 
 		// Set the headers.
 		for (int i = 0; i < maxdim2; i++) {
@@ -258,7 +255,7 @@ public class CharacterArrayDialog extends DiskReaderDialog {
 	 * 
 	 * @param FileToLoad
 	 */
-	private void LoadArrayFromFile(File FileToLoad) {
+	public void LoadArrayFromFile(File FileToLoad) {
 		int FileLimit = 10000;
 		lines.clear();
 		try {
@@ -293,7 +290,7 @@ public class CharacterArrayDialog extends DiskReaderDialog {
 	 * char for (2[,1]) ..... (1 byte): char for (N[,1]) (1 byte): char for (1[,2])
 	 * 
 	 */
-	private void AssembleArrayData() {
+	public void AssembleArrayData() {
 		// number of diumensions. For char arrays, probably two.
 		int dimensions = 1;
 		if (maxdim2 > 1) {
@@ -331,5 +328,22 @@ public class CharacterArrayDialog extends DiskReaderDialog {
 		}
 		System.out.println("final ptr: " + ptr);
 	}
+	
+	/**
+	 * Populate the maxdim from the file.
+	 *   
+	 */
+	public void CalcMaxDim() {
+		maxdim2 = 1;
+		for(String s:lines) {
+			if (s.length() > maxdim2) {
+				maxdim2 = s.length();
+			}
+		}
+		if (maxdim2 > 255) {
+			maxdim2 = 255;
+		}
+	}
+	
 
 }

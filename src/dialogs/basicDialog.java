@@ -55,7 +55,11 @@ public class basicDialog extends DiskReaderDialog {
 	//Next location in the array above when parsing the file.  
 	public int TargetPtr=0;
 	
-
+	//Dialog
+	public Shell dialog=null; 
+	
+	//Public link to the disk name
+	public Text DiskName=null; 
 	/**
 	 * Test used to check conversion from ASCII to tokenised basic. 
 	 * @param args
@@ -95,24 +99,18 @@ public class basicDialog extends DiskReaderDialog {
 	public basicDialog(Shell parent) {
 			super(parent);
 	}
-	
 
 	/**
-	 * Create and display the dialog.
-	 * 
-	 * @return
+	 * Create the dialog.
 	 */
-	public boolean open() {
+	public void init() {
 		IsOk = false;
-		Shell parent = getParent();
-		Shell dialog = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
+		dialog = new Shell(getParent(), SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
 		dialog.setSize(700, 500);
 		dialog.setText("Add BASIC file from text file");
 		dialog.setLayout(new GridLayout(4, false));
 
 		Composite cp = new Composite(dialog, SWT.NONE);
-		
-		
 		
 		cp.setBackground(new Color( dialog.getDisplay(), 0x80, 0x80, 0x80));
 		GridData data = new GridData(SWT.FILL, SWT.CENTER, false, false);
@@ -129,7 +127,7 @@ public class basicDialog extends DiskReaderDialog {
 		Button BtnSelFile = GetButton(dialog, "File:", GridData.BEGINNING);
 		Text FileNameEdit = GetText(dialog, "", 3);
 
-		Text DiskName = captionAndText(dialog, "Name on Disk", "");
+		DiskName = captionAndText(dialog, "Name on Disk", "");
 		
 		Text txtStartline = captionAndText(dialog, "Start line (blank = none)", "");
 
@@ -192,7 +190,7 @@ public class basicDialog extends DiskReaderDialog {
 						}
 					} catch (Exception E) {
 						System.out.println("Bad start line");
-						MessageBox box = new MessageBox(parent, SWT.OK);
+						MessageBox box = new MessageBox(getParent(), SWT.OK);
 						box.setText("Start line invalid");
 						box.setMessage("The start line is invalid\r\nEither leave the field blank or enter a number between 0 and 9999");
 
@@ -221,8 +219,17 @@ public class basicDialog extends DiskReaderDialog {
 			}
 		});
 
+	}
+
+	/**
+	 * Create and display the dialog.
+	 * 
+	 * @return
+	 */
+	public boolean open() {
+		init();
 		dialog.open();
-		Display display = parent.getDisplay();
+		Display display = getParent().getDisplay();
 		while (!dialog.isDisposed()) {
 			if (!display.readAndDispatch())
 				display.sleep();
@@ -235,7 +242,7 @@ public class basicDialog extends DiskReaderDialog {
 	 * 
 	 * @param filename
 	 */
-	private void LoadBasicFromFile(String filename) {
+	public void LoadBasicFromFile(String filename) {
 		int filelen = (int) new File(filename).length();
 		BasicAsBytes = new byte[filelen*3];
 		TargetPtr = 0;

@@ -1,4 +1,5 @@
 package diskviewer.libs.disk.cpm;
+
 /**
  * This object handles the +3 specific handling of the CPM files.
  * It has functions to package the given files with the +3DOS header
@@ -9,8 +10,6 @@ import java.io.File;
 import java.io.FileInputStream;
 
 import java.io.InputStream;
-
-
 
 public class PlusThreeDiskWrapper extends CPMDiskWrapper {
 
@@ -66,7 +65,6 @@ public class PlusThreeDiskWrapper extends CPMDiskWrapper {
 		AddPlusThreeFile(filename, data, address, 0, BASIC_CODE);
 	}
 
-	
 	/**
 	 * 
 	 * @param nameOnDisk
@@ -75,11 +73,11 @@ public class PlusThreeDiskWrapper extends CPMDiskWrapper {
 	 * @param basicoffset
 	 */
 	public void AddBasicFile(String nameOnDisk, byte[] basicAsBytes, int line, int basicoffset) {
-		AddPlusThreeFile(nameOnDisk, basicAsBytes, line, basicoffset,BASIC_BASIC);
+		AddPlusThreeFile(nameOnDisk, basicAsBytes, line, basicoffset, BASIC_BASIC);
 	}
-	
+
 	/**
-	 * Add a given file as a +3DOS file. 
+	 * Add a given file as a +3DOS file.
 	 * 
 	 * @param nameOnDisk
 	 * @param bytes
@@ -126,23 +124,25 @@ public class PlusThreeDiskWrapper extends CPMDiskWrapper {
 			}
 			rawbytes[127] = (byte) (checksum & 0xff);
 
-			log("AddRawCodeFile: Saving file with basic length: " + bytes.length
-						+ " CPM:" + cpmlen + " Data: " + rawbytes.length+" checksum: "+checksum+" val:"+rawbytes[127]);
+			log("AddRawCodeFile: Saving file with basic length: " + bytes.length + " CPM:" + cpmlen + " Data: "
+					+ rawbytes.length + " checksum: " + checksum + " val:" + rawbytes[127]);
 			SaveCPMFile(nameOnDisk, rawbytes);
-			
-			int ptr=0;
-			int eol=0;
-			char hexstr[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
-			while (ptr < rawbytes.length) {
-				int msb = (rawbytes[ptr] & 0xf0) / 16;
-				int lsb = (rawbytes[ptr] & 0x0f);
-				char result[] = { hexstr[msb], hexstr[lsb],' '};
-				ptr++;
-				System.out.print(result);
-				eol++;
-				if (eol==16) {
-					eol=0;
-					System.out.println();
+
+			if (VerboseMode) {
+				int ptr = 0;
+				int eol = 0;
+				char hexstr[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+				while (ptr < rawbytes.length) {
+					int msb = (rawbytes[ptr] & 0xf0) / 16;
+					int lsb = (rawbytes[ptr] & 0x0f);
+					char result[] = { hexstr[msb], hexstr[lsb], ' ' };
+					ptr++;
+					System.out.print(result);
+					eol++;
+					if (eol == 16) {
+						eol = 0;
+						System.out.println();
+					}
 				}
 			}
 		} catch (Exception E) {
@@ -153,11 +153,13 @@ public class PlusThreeDiskWrapper extends CPMDiskWrapper {
 
 	/**
 	 * Create a blank disk.
+	 * 
 	 * @param result
 	 */
 	public void CreateDisk(dialogs.NewDiskDialog.disktype result) {
-		CreateCPMDisk(result.Track, result.Heads,result.Sectors, result.MinSector, result.IsExtended, result.filler, result.Header, result.BootSector);
-		//fix the +3 information
+		CreateCPMDisk(result.Track, result.Heads, result.Sectors, result.MinSector, result.IsExtended, result.filler,
+				result.Header, result.BootSector);
+		// fix the +3 information
 	}
 
 }

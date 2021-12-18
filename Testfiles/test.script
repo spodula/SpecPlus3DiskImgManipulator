@@ -1,0 +1,17 @@
+#test script
+stop on error
+
+
+load /home/graham/dev/disks/basic.dsk
+
+#addscr col /home/graham/Pictures/*.png
+
+#addbasic text 32768 /home/graham/dev/disk.bas
+
+#addcode 32768 /home/graham/dev/test.csv
+
+addchararray /home/graham/dev/test.csv
+
+cat
+
+save /home/graham/dev/disks/basic1.dsk

@@ -124,6 +124,8 @@ public class codeDialog extends DiskReaderDialog {
 					extension = CPM.FixFilePart(extension.substring(0, 3).trim());
 					// NameOnDisk
 					DiskName.setText(filename + "." + extension);
+					
+					LoadFile( f );
 
 				}
 			}
@@ -167,25 +169,33 @@ public class codeDialog extends DiskReaderDialog {
 			if (!display.readAndDispatch())
 				display.sleep();
 		}
-		if (IsOk)
+		return (IsOk | (CodeAsBytes != null));
+	}
+	
+	/**
+	 * 
+	 * @param f
+	 */
+	private void LoadFile(File f) {
 		try {
-			// allocate memory for file
-			byte rawbytes[] = new byte[length];
+			int filelen = (int) f.length();
+
+			CodeAsBytes = new byte[filelen];
 			// Load file to memory.
-			InputStream in = new FileInputStream(filename);
+			InputStream in = new FileInputStream(f);
 			try {
-				for (int i = 0x00; i < rawbytes.length; i++) {
+				for (int i = 0x80; i < CodeAsBytes.length; i++) {
 					int chr = in.read();
-					rawbytes[i] = (byte) (chr & 0xff);
+					CodeAsBytes[i] = (byte) (chr & 0xff);
 				}
 			} finally {
 				in.close();
 			}
 		} catch (Exception E) {
 			E.printStackTrace();
-			IsOk = false;
+			CodeAsBytes = null;
 		}
-		return (IsOk);
 	}
+
 
 }
