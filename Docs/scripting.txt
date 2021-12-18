@@ -1,0 +1,121 @@
+This can be scripted for use to building disks. 
+
+This can be invoked on the command line as 
+
+	script=(scriptname)
+	
+Eg, java -jar diskviewer.jar script=build.txt
+
+blank lines and lines beginning with '#' are ignored. whitespace at the start of lines is ignored. 
+commands and parameters are not case sensitive except where required, Eg filenames on Linux.
+
+Valid commands:
+---------------------------------------------------------------------
+stop
+   - stop the script here. pretty useless
+stop on error 
+   - The script will stop if any errors occur
+stop never
+   - The script will continue even if errors occur
+   
+-----------------------------------------------------------------------
+newdisk [x] 
+  - Create a new disk to manipulate X is the disk type
+	Currently valid values: 
+	   0: CF/2 180k Disk (40 tracks 1 head 9 sectors) Spectrum +3/PCW type 3
+   	   1: CF/2 180k Disk (40 tracks 1 head 9 sectors) EXTENDED Spectrum +3/PCW type 3
+  Eg, 
+     newdisk 0
+     	- Creates a normal spectrum +3 disk
+-----------------------------------------------------------------------
+load [filename]
+  - Load a .dsk disk image to be manipulated
+
+  Eg,
+     load /home/bob/bobby.dsk
+-----------------------------------------------------------------------
+save [filename]
+  - save the current disk being manipulated
+  
+  Eg,
+     save /home/bob/bobby.dsk
+-----------------------------------------------------------------------
+addscr bw (int)|col] [filename]
+  - add an image as a screen$ file. Supports PNG, GIF, JPEG
+  	Both modes of the GUI version are supported, Black and white has its intensity cutoff. 
+  	the intensity cutoff in black and white mode ranges between 1 and 254.
+  	Wildcards are supported. 
+  	
+  Eg.
+  	addscr col /home/bob/Pictures/rainbow.gif
+  	addscr bw 128 /home/bob/Pictures/rainbow.gif
+  	addscr bw 128 /home/bob/Pictures/*.png
+-----------------------------------------------------------------------
+addbasic [raw|text] [start line] filename
+  - Add a file as a BASIC file, either pre-encoded or a text file. 
+  	[raw|text] determines if the file should be parsed (text) or is already encoded (raw)
+  	the start line should either be between 0 and 9999 or 32768 for no autostart.
+  	Wildcards are supported. 
+  	
+  Eg.
+  	addbasic text 10 /home/bob/test.bas
+  	addbasic raw 32768 /home/bob/test.raw
+  	addbasic text 0 /home/bob/speccy/*.bas
+-----------------------------------------------------------------------
+addcode [startaddr] filename
+  - add a CODE file
+    startaddr is the default load address of the file. Must be between 0 and 65535 
+  	Wildcards are supported.
+  	
+  Eg. 
+  	addcode 32768 /home/bob/file.bin 
+  	addcode 49152  /home/bob/*.dat 
+-----------------------------------------------------------------------
+addnumericarray  filename
+  -add a given csv file as a numeric array. 
+  	Wildcards are supported.
+  	
+  Eg. 
+  	addnumericarray /home/bob/test.csv 
+  	addnumericarray /home/bob/*.csv 
+-----------------------------------------------------------------------
+addcharacterarray  filename
+  -add a given text file as a string array. 
+  	Wildcards are supported.
+  	
+  Eg.
+  	addcharacterarray /home/bob/test.txt 
+  	addcharacterarray /home/bob/*.txt 
+-----------------------------------------------------------------------
+rename [to] [from]
+  - Rename a file on disk. 
+  
+  Eg.
+    rename test.bas test.bak
+-----------------------------------------------------------------------
+delete [file]
+  - delete a file from the disk.
+    Wildcards are NOT supported 
+  
+  eg.
+    delete test.bas
+-----------------------------------------------------------------------
+cat
+  - output a catalog of the loaded disk at the time the command is executed
+  
+  eg. 
+    cat
+    
+example output: 
+ Directory of disk /home/graham/dev/disks/basic.dsk 
+
+ Filename      Sz on Disk  typ +3Size type   flags
+ -------------------------------------------------
+ NOVARS.BAS    256          +3 13     BASIC  No autostart
+ BASIC.BAS     256          +3 68     BASIC  No autostart
+ VARSTEST.BAS  512          +3 380    BASIC  No autostart
+ TEST.CSV      256          +3 40     CHRARR name:j$
+ 
+ 169K free. 60 directory entries free.
+-----------------------------------------------------------------------
+
