@@ -313,7 +313,7 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 								IsValidCPMFileStructure = false;
 							}
 							// Check the rest of the characters
-							if (!CPM.CharIsCPMValid(c) && c!=' ')
+							if (!CPM.CharIsCPMValid(c) && c != ' ')
 								IsValidCPMFileStructure = false;
 						}
 					}
@@ -708,7 +708,7 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 	}
 
 	/**
-	 * Create a blank CPM disk. 
+	 * Create a blank CPM disk.
 	 * 
 	 * @param tracks
 	 * @param heads
@@ -729,8 +729,89 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 				s.data[i] = bootSector[i];
 			}
 		}
-		//Now parse all the information into Dirents. 
+		// Now parse all the information into Dirents.
 		ParseData();
+	}
+
+	/**
+	 * Search for files given the CPM wildcard (?= any character, *=any to end)
+	 * 
+	 * @param wildcard
+	 * @return
+	 */
+	public DirectoryEntry[] FetchDirEntries(String wildcard) {
+		ArrayList<DirectoryEntry> results = new ArrayList<DirectoryEntry>();
+		// convert the wildcard into a search array:
+		// Split into filename and extension. pad out with spaces.
+		String fname = wildcard.toUpperCase();
+		String filename = "";
+		String extension = "";
+		if (fname.contains(".")) {
+			int i = fname.lastIndexOf(".");
+			extension = fname.substring(i + 1);
+			filename = fname.substring(0, i);
+		} else {
+			filename = fname;
+		}
+		filename = filename + "        ";
+		extension = extension + "   ";
+
+		// create search array.
+		byte comp[] = new byte[12];
+
+		// populate with filename
+		boolean foundstar = false;
+		for (int i = 0; i < 8; i++) {
+			if (foundstar) {
+				comp[i] = '?';
+			} else {
+				char c = filename.charAt(i);
+				if (c == '*') {
+					foundstar = true;
+					comp[i] = '?';
+				} else {
+					comp[i] = (byte) ((int) c & 0xff);
+				}
+			}
+		}
+
+		// populate with extension
+		foundstar = false;
+		for (int i = 0; i < 3; i++) {
+			if (foundstar) {
+				comp[i + 8] = '?';
+			} else {
+				char c = extension.charAt(i);
+				if (c == '*') {
+					foundstar = true;
+					comp[i + 8] = '?';
+				} else {
+					comp[i + 8] = (byte) ((int) c & 0xff);
+				}
+			}
+		}
+		
+		// now search.
+		for (DirectoryEntry de : DirectoryEntries) {
+			if (!de.IsDeleted) { //skip deleted files. 
+				//check the filename
+				boolean match=true;
+				for (int i = 0; i < 11; i++) {
+					byte chr = de.dirents[0].rawdirent[i + 1];
+					byte cchr = comp[i];
+					if ((chr!=cchr) && (cchr!='?')) {
+						match=false;
+					}
+				}
+				if (match) {
+					results.add(de);
+				}
+			}
+		}
+
+		DirectoryEntry res[] = new DirectoryEntry[results.size()];
+		res = results.toArray(res);
+		return (res);
 	}
 
 }

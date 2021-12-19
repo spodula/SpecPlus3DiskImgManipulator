@@ -4,7 +4,6 @@ package diskviewer;
 //TODO: Add basic file - Add variables into variable area?
 //TODO: In disk building, add a single command mode of the form: disk=diskname command="<command>" which will load and save the disk
 //TODO: modify Attributes. 
-//TODO: in disk building, support wildcards in delete
 
 //bugs
 

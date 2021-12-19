@@ -768,30 +768,42 @@ public class DskBrowserMainForm {
 		} else if (cmd.equals("delete")) {
 			if (params.isBlank()) {
 				System.out.println(" Expecting delete (file)");
-				System.out.println(" Filenames can not be a wildcard");
+				System.out.println(" Filenames can be a wildcard");
 				result = false;
 			} else {
 				String param[] = params.split(" ");
-				if (params.length()!=1) {
+				if (param.length!=1) {
 					System.out.println(" Expecting delete (file)");
-					System.out.println(" Filenames can not be a wildcard");
+					System.out.println(" Filenames can be a wildcard");
 					result = false;					
 				} else {
-					DirectoryEntry file =  CurrentDisk.GetDirectoryEntry(CPM.FixFullName(param[0]));
-					if (file == null) {
+					DirectoryEntry de[] = CurrentDisk.FetchDirEntries(param[0]);
+					if (de==null || de.length==0) {
 						System.out.println(" File \""+param[0]+"\" does not exist");
 					} else {
-						file.SetDeleted(true);
-						System.out.println(" File delete.");
+						for(DirectoryEntry d:de) {
+							d.SetDeleted(true);
+							System.out.println(" "+d.filename()+" deleted");
+						}
 					}
+					
 				}
 			}
 		} else if (cmd.equals("cat")) {
-			System.out.println("Directory of disk "+CurrentDisk.LastFileName+"\r\n");
+			DirectoryEntry folder[] = CurrentDisk.DirectoryEntries;
 			
-			System.out.println("Filename      Sz on Disk  typ +3Size type   flags");
+			System.out.println("Directory of disk "+CurrentDisk.LastFileName);
+			if (!params.isBlank()) {
+				folder = CurrentDisk.FetchDirEntries(params);
+				System.out.println("files named: "+params);
+			} else {
+				System.out.println("All files");
+			}
+			System.out.println();
+			
+			System.out.println("Filename      Disksz  Attr typ +3Size type   flags");
 			System.out.println("-------------------------------------------------");
-			for(DirectoryEntry d:CurrentDisk.DirectoryEntries) {
+			for(DirectoryEntry d:folder) {
 				if (!d.IsDeleted) {
 					System.out.print(padto(d.filename(),14));
 					System.out.print(padto(String.valueOf(d.GetFileSize()),8));
@@ -807,9 +819,9 @@ public class DskBrowserMainForm {
 					
 					Plus3DosFileHeader hdr = d.GetPlus3DosHeader();
 					if (hdr==null || !hdr.IsPlusThreeDosFile) {
-						System.out.print(" CPM");
+						System.out.print(" CPM ");
 					} else {
-						System.out.print(" +3 ");
+						System.out.print(" +3  ");
 					}
 					
 					System.out.print(padto(String.valueOf(hdr.filelength),6));

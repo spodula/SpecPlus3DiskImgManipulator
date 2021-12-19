@@ -216,7 +216,7 @@ public class DirectoryEntry {
 		for (Dirent d : dirents) {
 			int sectornum = d.entrynum / DirentsPerSector;
 			int locationwithinsector = (d.entrynum % DirentsPerSector) * 32;
-			System.out.println("Dirent: " + d.entrynum + "Updating s" + sectornum + " loc " + locationwithinsector);
+			//System.out.println("Dirent: " + d.entrynum + "Updating s" + sectornum + " loc " + locationwithinsector);
 			// Assumption: There are always the same number of sectors per track.
 			int track = ThisDisk.reservedTracks;
 			while (sectornum > ThisDisk.numsectors) {
