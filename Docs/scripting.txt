@@ -95,10 +95,11 @@ rename [to] [from]
 -----------------------------------------------------------------------
 delete [file]
   - delete a file from the disk.
-    Wildcards are NOT supported 
+    Wildcards are supported 
   
   eg.
     delete test.bas
+    delete *.bas
 -----------------------------------------------------------------------
 cat
   - output a catalog of the loaded disk at the time the command is executed
