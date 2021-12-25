@@ -182,7 +182,9 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 			// Parse out the boot block.
 			if (Tracks[0].minsectorID == 1) { // first sector=1 PCW/+3
 				// if we have an invalid bootsector fiddle the data
-				if ((BootSect.data[0] & 0xff) != 0xe5) {
+				// fix GDS 22 Dec 2021 - Valid values for byte 1 are 0-3 only. This makes the
+				// Khobrasoft SP7 disk load (Fossr some reaosn passed with b0 in sector 1)
+				if ((BootSect.data[0] & 0xff) < 4) {
 					// bootsector is valid so use that.
 					disktype = BootSect.data[0] & 0xff;
 					numsides = BootSect.data[1] & 0xff;
@@ -297,17 +299,11 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 				if ((firstbyte != 0xe5) && firstbyte > 31) {
 					IsValidCPMFileStructure = false;
 				} else {
-					if (firstbyte == 0xe5) {
-						for (int i = 1; i < 31; i++) {
-							char c = (char) (FirstSector.data[i] & 0xff);
-							if (c != 0xe5) {
-								IsValidCPMFileStructure = false;
-							}
-						}
-					} else {
-						// Check for a valid filename
-						for (int i = 1; i < 12; i++) {
-							char c = (char) (FirstSector.data[i] & 0x7f);
+
+					// Check for a valid filename
+					for (int i = 1; i < 12; i++) {
+						char c = (char) (FirstSector.data[i] & 0x7f);
+						if (c != 0xe5) {
 							// Flags appear on bit 7 on the extensions, shouldnt appear elsewere.
 							if (((FirstSector.data[i] & 0x80) != 0) && i < 9) {
 								IsValidCPMFileStructure = false;
@@ -790,24 +786,22 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 				}
 			}
 		}
-		
+
 		// now search.
 		for (DirectoryEntry de : DirectoryEntries) {
-			if (!de.IsDeleted) { //skip deleted files. 
-				//check the filename
-				boolean match=true;
+				// check the filename
+				boolean match = true;
 				for (int i = 0; i < 11; i++) {
 					byte chr = de.dirents[0].rawdirent[i + 1];
 					byte cchr = comp[i];
-					if ((chr!=cchr) && (cchr!='?')) {
-						match=false;
+					if ((chr != cchr) && (cchr != '?')) {
+						match = false;
 					}
 				}
 				if (match) {
 					results.add(de);
 				}
 			}
-		}
 
 		DirectoryEntry res[] = new DirectoryEntry[results.size()];
 		res = results.toArray(res);

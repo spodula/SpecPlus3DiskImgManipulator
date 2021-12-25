@@ -122,10 +122,8 @@ public class FilesPage extends page {
 					sb.append("</table>\r\n");
 					sb.append("<h2>BASIC header information</h2>\r\n");
 
-					String filetypes[] = { "Program", "Numeric array", "Char array", "Code" };
-
 					sb.append("<table>\r\n");
-					sb.append("<tr><th><b>File type</b></th><td>" + filetypes[header.filetype] + " (" + header.filetype
+					sb.append("<tr><th><b>File type</b></th><td>" + header.getTypeDesc()+ " (" + header.filetype
 							+ ")</td>\r\n");
 					sb.append("<th><b>File length</b></th><td>" + header.filelength + "</td>\r\n");
 					if (header.filetype == Plus3DosFileHeader.FILETYPE_BASIC) {

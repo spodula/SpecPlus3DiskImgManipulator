@@ -75,7 +75,8 @@ public class Plus3DosFileHeader {
 	public static int FILETYPE_CHRARRAY=2;
 	public static int FILETYPE_CODE=3;
 	
-
+	private String[] filetypes = {"Basic","Numeric array","Char array","Code"};
+	
 	/**
 	 * Create the object and populated from the passed block. This block must be > 127 bytes
 	 * @param block
@@ -137,6 +138,14 @@ public class Plus3DosFileHeader {
 
 		}
 	
+	}
+	
+	public String getTypeDesc() {
+		String result = "Invalid";
+		if (filetype> -1 && filetype < 4) {
+			result = filetypes[filetype];
+		}
+		return(result);
 	}
 
 }

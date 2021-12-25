@@ -95,17 +95,30 @@ rename [to] [from]
 -----------------------------------------------------------------------
 delete [file]
   - delete a file from the disk.
-    Wildcards are supported 
+    CPM style Wildcards are supported 
   
   eg.
     delete test.bas
-    delete *.bas
+    delete *.bak
+    delete fred.b?ss
 -----------------------------------------------------------------------
-cat
+undelete [file]
+  - undelete a file from the disk.
+    CPM style Wildcards are supported 
+  
+  eg.
+    undelete test.bas
+    undelete *.bak
+    undelete fred.b?ss
+-----------------------------------------------------------------------
+cat [wildcard|all]
   - output a catalog of the loaded disk at the time the command is executed
+  optional wildcards. using ALL as the parameter will output deleted files as well. 
   
   eg. 
     cat
+    cat *.bas
+    cat all 
     
 example output: 
  Directory of disk /home/graham/dev/disks/basic.dsk 

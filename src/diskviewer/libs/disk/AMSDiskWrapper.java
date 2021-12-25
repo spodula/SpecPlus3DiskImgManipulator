@@ -132,16 +132,11 @@ public class AMSDiskWrapper {
 		LastFileName = filename;
 		InputStream in = new FileInputStream(filename);
 		try {
-			int chr;
-
 			// Read the ADF Disk info block into a bit of memory
-			// This bit is always 256 bytes long.
-			for (int i = 0; i < 256; i++) {
-				chr = in.read();
-				if (chr == -1) {
+			// This bit is adlways 256 bytes long.
+			DiskInfoBlock = in.readNBytes(256);
+			if (DiskInfoBlock.length != 256) {
 					throw new BadDiskFileException("Disk file not big enough");
-				}
-				DiskInfoBlock[i] = (byte) (chr & 0xff);
 			}
 			// Parse the disk information into a structure.
 			ParsedDiskInfo = new DiskInfo(DiskInfoBlock);
@@ -159,17 +154,12 @@ public class AMSDiskWrapper {
 			// Track sizes can be variable in the case of extended disks.
 			// eg, in the case of some copy protection methods.
 			// its easier to just load each track into an array.
-			chr = 0;
-			byte CurrentRawTrack[] = new byte[ParsedDiskInfo.LargestTrackSize];
 			for (int tracknum = 0; tracknum < ParsedDiskInfo.tracks; tracknum++) {
 				// Load the track
-				for (int c = 0; c < ParsedDiskInfo.TrackSizes[tracknum]; c++) {
-					chr = in.read();
-					if (chr == -1) {
+				byte CurrentRawTrack[] = in.readNBytes(ParsedDiskInfo.TrackSizes[tracknum]);
+				if (CurrentRawTrack.length != ParsedDiskInfo.TrackSizes[tracknum]) {
 						throw new BadDiskFileException("Disk file not big enough");
 					}
-					CurrentRawTrack[c] = (byte) (chr & 0xff);
-				}
 				// *********************************************************
 				// get the track header...
 				// *********************************************************

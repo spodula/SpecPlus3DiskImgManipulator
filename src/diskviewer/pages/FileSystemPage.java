@@ -52,7 +52,9 @@ public class FileSystemPage extends page {
 			result = result + "<tr>";
 			result = result + "<th></th>";
 			result = result + "<th>Filename</th>";
-			result = result + "<th>Logical size</th>";
+			result = result + "<th>CPM size</th>";
+			result = result + "<th>+3 size</th>";
+			result = result + "<th>+3 type</th>";
 			result = result + "<th>dirents</th>";
 			result = result + "<th>blocks</th>";
 			result = result + "</tr>\r\n";
@@ -82,18 +84,25 @@ public class FileSystemPage extends page {
 						deltext = deltext + " (Incomplete)";
 					}
 				}
+				String filesize = "not a +3 file";
+				String flags="";
+			
+				Plus3DosFileHeader pfdh = d.GetPlus3DosHeader();
+				if (pfdh.IsPlusThreeDosFile) {
+					filesize = String.valueOf(pfdh.filelength);
+					flags = pfdh.getTypeDesc();
+				}
 
 				result = result + "<tr>" + "<td><button type=\"button\" onclick=\"ShowFile('" + i
 						+ "')\" style=\"background-color:" + colours[i % colours.length] + ";width:40\">" + i
 						+ "</button></td>" + "<td>" + d.filename() + deltext + "</td>" + "<td>" + d.GetFileSize()
-						+ "</td>" + "<td>" + entries + "</td>" + "<td>" + blocks + "</td>" + "</tr>\r\n";
+						+ "</td>" +"<td>"+filesize+"</td>"+"<td>"+flags+"</td>"+ "<td>" + entries + "</td>" + "<td>" + blocks + "</td>" + "</tr>\r\n";
 				i++;
 			}
 			result = result + "</table>\r\n<br>";
 			if (disk.DirectoryEntries!=null || disk.DirectoryEntries.length == 0) {
 				result = result +"<h2>No files</h2>"; 
 			}
-
 			// Now display the BAM in 32 block sections.
 			// Create a BAM populated with filename numbers.
 			int bam[] = new int[disk.maxblocks];

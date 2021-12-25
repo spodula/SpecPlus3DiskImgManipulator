@@ -14,15 +14,16 @@ import diskviewer.libs.disk.TrackInfo;
 public class DirectoryEntry {
 	// the raw dirents associated with this entry
 	public Dirent[] dirents = null;
-	
+
 	// The disk its on.
 	private CPMDiskWrapper ThisDisk = null;
-	
+
 	// is file deleted
 	public boolean IsDeleted = false;
 
 	/**
-	 * Parse and return the filename from the first DIRENT. 
+	 * Parse and return the filename from the first DIRENT.
+	 * 
 	 * @return
 	 */
 	public String filename() {
@@ -34,7 +35,7 @@ public class DirectoryEntry {
 	}
 
 	/**
-	 * Create the directory entry. 
+	 * Create the directory entry.
 	 * 
 	 * @param filename
 	 * @param disk
@@ -51,7 +52,7 @@ public class DirectoryEntry {
 	 * @param d
 	 */
 	public void addDirent(Dirent d) {
-		//Duplicate the dirent list and add the new one. 
+		// Duplicate the dirent list and add the new one.
 		Dirent[] newdirent = new Dirent[dirents.length + 1];
 		for (int i = 0; i < dirents.length; i++) {
 			newdirent[i] = dirents[i];
@@ -91,13 +92,18 @@ public class DirectoryEntry {
 		ArrayList<Integer> al = new ArrayList<Integer>();
 		for (int i = 0; i < dirents.length; i++) {
 			Dirent d = getExtentByNum(i);
-			int blocks[] = d.getBlocks();
-			for (int block : blocks) {
-				if (block != 0) {
-					al.add(block);
+			if (d == null) {
+				System.out.println("Bad extent number: " + i + " for " + filename());
+			} else {
+				int blocks[] = d.getBlocks();
+				for (int block : blocks) {
+					if (block != 0) {
+						al.add(block);
+					}
 				}
 			}
 		}
+
 		// now convert the arraylist into a int[] to return
 		int[] result = new int[al.size()];
 		for (int i = 0; i < al.size(); i++) {
@@ -118,8 +124,12 @@ public class DirectoryEntry {
 
 		// Get the number of records used in the last dirent.
 		Dirent lastdirent = getExtentByNum(dirents.length - 1);
-		int bytesinllb = lastdirent.GetBytesInLastLogicalBlock();
-
+		int bytesinllb = 0;
+		if (lastdirent == null) {
+			System.out.println("Cant get last dirent for " + filename());
+		} else {
+			bytesinllb = lastdirent.GetBytesInLastLogicalBlock();
+		}
 		return (bytesinllb + filesize);
 
 	}
@@ -160,23 +170,30 @@ public class DirectoryEntry {
 	 * @return
 	 */
 	public Plus3DosFileHeader GetPlus3DosHeader() {
+
 		// Load the first block of the file
 		Plus3DosFileHeader pdh = null;
 		int[] blocks = getBlocks();
-		byte Block0[] = null;
-		try {
-			Block0 = ThisDisk.GetBlock(blocks[0]);
-			pdh = new Plus3DosFileHeader(Block0);
-		} catch (BadDiskFileException e) {
-			System.out.println("Cannot read first block of " + filename() + ".\r\n" + e.getMessage());
+		//this fisex an issue with zero length CPM files. 
+		//we will just return an invalid +3 data structure. 
+		//Eg, the alcatraz development disks, "New word" side A
+		if (blocks.length == 0) {
+			pdh = new Plus3DosFileHeader(new byte[256]);
+		} else {
+			byte Block0[] = null;
+			try {
+				Block0 = ThisDisk.GetBlock(blocks[0]);
+				pdh = new Plus3DosFileHeader(Block0);
+			} catch (BadDiskFileException e) {
+				System.out.println("Cannot read first block of " + filename() + ".\r\n" + e.getMessage());
+			}
 		}
-
 		return (pdh);
 	}
 
 	/**
-	 * Check to see if the current directory entry is a complete file. 
-	 * Only applies to deleted files, Other files are assumed to be complete.  
+	 * Check to see if the current directory entry is a complete file. Only applies
+	 * to deleted files, Other files are assumed to be complete.
 	 * 
 	 * @return
 	 */
@@ -216,7 +233,8 @@ public class DirectoryEntry {
 		for (Dirent d : dirents) {
 			int sectornum = d.entrynum / DirentsPerSector;
 			int locationwithinsector = (d.entrynum % DirentsPerSector) * 32;
-			//System.out.println("Dirent: " + d.entrynum + "Updating s" + sectornum + " loc " + locationwithinsector);
+			// System.out.println("Dirent: " + d.entrynum + "Updating s" + sectornum + " loc
+			// " + locationwithinsector);
 			// Assumption: There are always the same number of sectors per track.
 			int track = ThisDisk.reservedTracks;
 			while (sectornum > ThisDisk.numsectors) {

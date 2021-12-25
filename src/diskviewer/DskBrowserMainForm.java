@@ -73,7 +73,7 @@ public class DskBrowserMainForm {
 	private SearchDialog SearchDialog = null;
 
 	// The wrapper around the current disk being edited.
-	private PlusThreeDiskWrapper CurrentDisk = new PlusThreeDiskWrapper();
+	public PlusThreeDiskWrapper CurrentDisk = new PlusThreeDiskWrapper();
 
 	// Object controlling the pages used for display
 	private PageHandler pages = new PageHandler();
@@ -255,28 +255,21 @@ public class DskBrowserMainForm {
 			fd.setText("Open DSK file");
 			// fd.setFilterPath("C:/");
 			String[] filterExt = { "*.dsk", "*.img", "*.*" };
+			// tweak by GDS 22 Dec 2021 - Assume you want to open from the same folder you
+			// openned the last disk.
+			if (!CurrentDisk.LastFileName.isBlank()) {
+				fd.setFileName(CurrentDisk.LastFileName);
+			}
 			fd.setFilterExtensions(filterExt);
 			String selected = fd.open();
 			if (VerboseMode)
 				System.out.println(selected);
 			if (selected != null && !selected.isBlank()) {
-				try {
-					if (SearchDialog != null) {
-						SearchDialog.ForceDispose();
-						SearchDialog = null;
-					}
-					CurrentDisk.load(selected);
-					// default to the filesystem page is there is a filesystem
-					if (CurrentDisk.IsValidCPMFileStructure) {
-						browser.setText(pages.GetPage(4, CurrentDisk));
-					} else {
-						// otherwise, the raw disk structure.
-						browser.setText(pages.GetPage(1, CurrentDisk));
-					}
-					SetHeader(new File(selected).getName());
-				} catch (Exception E) {
-					System.out.println("Error loading." + E.getMessage());
+				if (SearchDialog != null) {
+					SearchDialog.ForceDispose();
+					SearchDialog = null;
 				}
+				LoadDisk(selected);
 			}
 		});
 
@@ -284,6 +277,11 @@ public class DskBrowserMainForm {
 			if (CurrentDisk.IsValid) {
 				FileDialog fd = new FileDialog(shell, SWT.SAVE);
 				fd.setText("Save DSK file");
+				// tweak by GDS 22 Dec 2021 - Assume you want to save to the same folder you
+				// last loaded from.
+				if (!CurrentDisk.LastFileName.isBlank()) {
+					fd.setFileName(CurrentDisk.LastFileName);
+				}
 				String selected = fd.open();
 				if (VerboseMode)
 					System.out.println(selected);
@@ -323,6 +321,28 @@ public class DskBrowserMainForm {
 			browser.setText(pages.GetPage(PageHandler.FILE_SYSTEM, CurrentDisk));
 		});
 
+	}
+
+	/**
+	 * LOad the given disk and set the aproproate page afterwards.
+	 * 
+	 * @param selected
+	 */
+	public void LoadDisk(String selected) {
+		try {
+			CurrentDisk.load(selected);
+		} catch (BadDiskFileException | IOException e) {
+			System.out.println(" Disk load error loading " + selected);
+			System.out.println(e.getMessage());
+		}
+		// default to the filesystem page is there is a filesystem
+		if (CurrentDisk.IsValidCPMFileStructure) {
+			browser.setText(pages.GetPage(4, CurrentDisk));
+		} else {
+			// otherwise, the raw disk structure.
+			browser.setText(pages.GetPage(1, CurrentDisk));
+		}
+		SetHeader(new File(selected).getName());
 	}
 
 	/**
@@ -437,7 +457,7 @@ public class DskBrowserMainForm {
 	 * 
 	 * @param line
 	 */
-	private boolean processCommand(String line) {
+	public boolean processCommand(String line) {
 		boolean result = true;
 		line = line.trim();
 		String cmd = "";
@@ -634,18 +654,17 @@ public class DskBrowserMainForm {
 
 							for (File f : files) {
 								String filename = CPM.FixFullName(f.getName());
-								System.out.println("Adding "+f.getAbsolutePath()+" as "+filename);
+								System.out.println("Adding " + f.getAbsolutePath() + " as " + filename);
 								// load and encode the file
 								bd.LoadBasicFromFile(f.getAbsolutePath());
 								// save to the disk.
-								CurrentDisk.AddBasicFile(filename, bd.BasicAsBytes, lineno,
-										bd.BasicAsBytes.length);
+								CurrentDisk.AddBasicFile(filename, bd.BasicAsBytes, lineno, bd.BasicAsBytes.length);
 							}
 						} else {
 							// Load file to memory.
 							for (File f : files) {
 								String filename = CPM.FixFullName(f.getName());
-								System.out.println("Adding "+f.getAbsolutePath()+" as "+filename);
+								System.out.println("Adding " + f.getAbsolutePath() + " as " + filename);
 								try {
 									byte[] BasicAsBytes = new byte[(int) f.length()];
 									InputStream in = new FileInputStream(f);
@@ -658,8 +677,7 @@ public class DskBrowserMainForm {
 										in.close();
 									}
 									// save to the disk.
-									CurrentDisk.AddBasicFile(filename, BasicAsBytes, lineno,
-											BasicAsBytes.length);
+									CurrentDisk.AddBasicFile(filename, BasicAsBytes, lineno, BasicAsBytes.length);
 
 								} catch (IOException E) {
 									System.out.println(" Error reading the file: " + E.getMessage());
@@ -719,7 +737,7 @@ public class DskBrowserMainForm {
 						for (File f : files) {
 							try {
 								String filename = CPM.FixFullName(f.getName());
-								System.out.println("Adding "+f.getAbsolutePath()+" as "+filename);
+								System.out.println("Adding " + f.getAbsolutePath() + " as " + filename);
 
 								byte[] codebytes = new byte[(int) f.length()];
 								InputStream in = new FileInputStream(f);
@@ -751,14 +769,14 @@ public class DskBrowserMainForm {
 				result = false;
 			} else {
 				String param[] = params.split(" ");
-				if (params.length()!=2) {
+				if (params.length() != 2) {
 					System.out.println(" Expecting rename (from) (to)");
 					System.out.println(" Filenames can NOT be a wildcard");
-					result = false;					
+					result = false;
 				} else {
-					DirectoryEntry file =  CurrentDisk.GetDirectoryEntry(CPM.FixFullName(param[0]));
+					DirectoryEntry file = CurrentDisk.GetDirectoryEntry(CPM.FixFullName(param[0]));
 					if (file == null) {
-						System.out.println(" File \""+param[0]+"\" does not exist");
+						System.out.println(" File \"" + param[0] + "\" does not exist");
 					} else {
 						file.RenameTo(CPM.FixFullName(param[1]));
 						System.out.println(" File renamed.");
@@ -772,87 +790,123 @@ public class DskBrowserMainForm {
 				result = false;
 			} else {
 				String param[] = params.split(" ");
-				if (param.length!=1) {
+				if (param.length != 1) {
 					System.out.println(" Expecting delete (file)");
 					System.out.println(" Filenames can be a wildcard");
-					result = false;					
+					result = false;
 				} else {
 					DirectoryEntry de[] = CurrentDisk.FetchDirEntries(param[0]);
-					if (de==null || de.length==0) {
-						System.out.println(" File \""+param[0]+"\" does not exist");
+					if (de == null || de.length == 0) {
+						System.out.println(" File \"" + param[0] + "\" does not exist");
 					} else {
-						for(DirectoryEntry d:de) {
+						for (DirectoryEntry d : de) {
 							d.SetDeleted(true);
-							System.out.println(" "+d.filename()+" deleted");
+							System.out.println(" " + d.filename() + " deleted");
 						}
 					}
-					
+
+				}
+			}
+		} else if (cmd.equals("undelete")) {
+			if (params.isBlank()) {
+				System.out.println(" Expecting undelete (file)");
+				System.out.println(" Filenames can be a wildcard");
+				result = false;
+			} else {
+				String param[] = params.split(" ");
+				if (param.length != 1) {
+					System.out.println(" Expecting undelete (file)");
+					System.out.println(" Filenames can be a wildcard");
+					result = false;
+				} else {
+					DirectoryEntry de[] = CurrentDisk.FetchDirEntries(param[0]);
+					if (de == null || de.length == 0) {
+						System.out.println(" File \"" + param[0] + "\" does not exist");
+					} else {
+						for (DirectoryEntry d : de) {
+							d.SetDeleted(false);
+							System.out.println(" " + d.filename() + " undeleted");
+						}
+					}
+
 				}
 			}
 		} else if (cmd.equals("cat")) {
 			DirectoryEntry folder[] = CurrentDisk.DirectoryEntries;
+			boolean incDeleted=false;
 			
-			System.out.println("Directory of disk "+CurrentDisk.LastFileName);
+			System.out.println("Directory of disk " + CurrentDisk.LastFileName);
 			if (!params.isBlank()) {
+				if (params.toLowerCase().equals("all")) {
+					incDeleted = true;
+					System.out.println("All files including deleted files.");
+				} else {
 				folder = CurrentDisk.FetchDirEntries(params);
-				System.out.println("files named: "+params);
+				System.out.println("files named: " + params);
+				}
 			} else {
 				System.out.println("All files");
 			}
 			System.out.println();
-			
-			System.out.println("Filename      Disksz  Attr typ +3Size type   flags");
-			System.out.println("-------------------------------------------------");
-			for(DirectoryEntry d:folder) {
-				if (!d.IsDeleted) {
-					System.out.print(padto(d.filename(),14));
-					System.out.print(padto(String.valueOf(d.GetFileSize()),8));
-					
-					char attribs[] = new char[4];
-					for(int x=0;x<attribs.length;x++) attribs[x] = ' ';
-					
-					if (d.dirents[0].GetReadOnly()) attribs[0] = 'R';
-					if (d.dirents[0].GetSystem())   attribs[1] = 'S';
-					if (d.dirents[0].GetArchive())  attribs[2] = 'A';
+
+			System.out.println("Filename      Disksz  Attr  typ +3Size type   flags");
+			System.out.println("---------------------------------------------------");
+			for (DirectoryEntry d : folder) {
+				if (!d.IsDeleted || incDeleted) {
+					System.out.print(padto(d.filename(), 14)); 
+					System.out.print(padto(String.valueOf(d.GetFileSize()), 8));
+
+					if (d.IsDeleted) { 
+						System.out.print("(Del)");
+					} else {
+					char attribs[] = new char[5];
+					for (int x = 0; x < attribs.length; x++)
+						attribs[x] = ' ';
+
+					if (d.dirents[0].GetReadOnly())
+						attribs[0] = 'R';
+					if (d.dirents[0].GetSystem())
+						attribs[1] = 'S';
+					if (d.dirents[0].GetArchive())
+						attribs[2] = 'A';
 					System.out.print(String.valueOf(attribs));
-					
+					}
 					
 					Plus3DosFileHeader hdr = d.GetPlus3DosHeader();
-					if (hdr==null || !hdr.IsPlusThreeDosFile) {
+					if (hdr == null || !hdr.IsPlusThreeDosFile) {
 						System.out.print(" CPM ");
 					} else {
 						System.out.print(" +3  ");
 					}
-					
-					System.out.print(padto(String.valueOf(hdr.filelength),6));
-					
-					if (hdr.filetype==Plus3DosFileHeader.FILETYPE_BASIC) {
+
+					System.out.print(padto(String.valueOf(hdr.filelength), 6));
+
+					if (hdr.filetype == Plus3DosFileHeader.FILETYPE_BASIC) {
 						System.out.print(" BASIC  ");
-						if (hdr.line==32768) {
+						if (hdr.line == 32768) {
 							System.out.print("No autostart");
-						}
-						else System.out.print("line "+hdr.line);
-						
-					} else if (hdr.filetype==Plus3DosFileHeader.FILETYPE_CODE) {
+						} else
+							System.out.print("line " + hdr.line);
+
+					} else if (hdr.filetype == Plus3DosFileHeader.FILETYPE_CODE) {
 						System.out.print(" CODE   ");
-						System.out.print("Loadaddr: "+hdr.loadAddr);
-						
-					} else if (hdr.filetype==Plus3DosFileHeader.FILETYPE_NUMARRAY) {
+						System.out.print("Loadaddr: " + hdr.loadAddr);
+
+					} else if (hdr.filetype == Plus3DosFileHeader.FILETYPE_NUMARRAY) {
 						System.out.print(" NUMARR ");
-						System.out.print("name:" +hdr.VarName);
-						
-					} else if (hdr.filetype==Plus3DosFileHeader.FILETYPE_CHRARRAY) {
+						System.out.print("name:" + hdr.VarName);
+
+					} else if (hdr.filetype == Plus3DosFileHeader.FILETYPE_CHRARRAY) {
 						System.out.print(" CHRARR ");
-						System.out.print("name:" +hdr.VarName);	
+						System.out.print("name:" + hdr.VarName);
 					}
 					System.out.println();
 				}
 			}
 			System.out.println();
-			System.out.print(CurrentDisk.freeSpace+"K free. ");
+			System.out.print(CurrentDisk.freeSpace + "K free. ");
 			int numdirentsfree = CurrentDisk.maxDirEnts - CurrentDisk.usedDirEnts;
-			System.out.println(numdirentsfree+" directory entries free.");
-			
+			System.out.println(numdirentsfree + " directory entries free.");
 
 		} else if (cmd.equals("addnumericarray")) {
 			if (params.isBlank()) {
@@ -869,14 +923,14 @@ public class DskBrowserMainForm {
 
 				NumericArrayDialog nad = new NumericArrayDialog(shell);
 				nad.init();
-				
+
 				if (files != null && files.length > 0) {
 					// Load file to memory.
 					for (File f : files) {
 						try {
 							String filename = CPM.FixFullName(f.getName());
-							System.out.println("Adding "+f.getAbsolutePath()+" as "+filename);
-							
+							System.out.println("Adding " + f.getAbsolutePath() + " as " + filename);
+
 							nad.LoadArrayFromFile(f);
 							nad.AssembleArrayData();
 
@@ -909,14 +963,14 @@ public class DskBrowserMainForm {
 
 				CharacterArrayDialog cad = new CharacterArrayDialog(shell);
 				cad.init();
-				
+
 				if (files != null && files.length > 0) {
 					// Load file to memory.
 					for (File f : files) {
 						try {
 							String filename = CPM.FixFullName(f.getName());
-							System.out.println("Adding "+f.getAbsolutePath()+" as "+filename);
-							
+							System.out.println("Adding " + f.getAbsolutePath() + " as " + filename);
+
 							cad.LoadArrayFromFile(f);
 							cad.CalcMaxDim();
 							cad.AssembleArrayData();
@@ -952,7 +1006,7 @@ public class DskBrowserMainForm {
 				result = false;
 			}
 		} else {
-			System.out.println("Bad command: "+cmd);
+			System.out.println("Bad command: " + cmd);
 			result = false;
 		}
 		return (result);
@@ -966,12 +1020,12 @@ public class DskBrowserMainForm {
 	 * @param length
 	 * @return
 	 */
-	private String padto(String s,int length) {
+	private String padto(String s, int length) {
 		String result = s;
 		while (result.length() < length) {
 			result = result + " ";
-		}		
-		return(result);
+		}
+		return (result);
 	}
 
 }

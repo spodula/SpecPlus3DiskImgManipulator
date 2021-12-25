@@ -14,4 +14,8 @@ addchararray /home/graham/dev/test.csv
 
 cat
 
+delete *.bas
+
+cat 
+
 save /home/graham/dev/disks/basic1.dsk
