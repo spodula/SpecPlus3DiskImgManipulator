@@ -105,11 +105,22 @@ delete [file]
 undelete [file]
   - undelete a file from the disk.
     CPM style Wildcards are supported 
-  
+   
   eg.
     undelete test.bas
     undelete *.bak
     undelete fred.b?ss
+-----------------------------------------------------------------------
+attrib [file] [modifiers]
+  -Set attributes on the given file.
+   Attributes are 
+   		S (system) 
+   		A (Archive)
+   		R (Read only)
+   Multiple seperate attributes are supported
+   
+   eg.
+     attrib fred.bas +S +A -R	
 -----------------------------------------------------------------------
 cat [wildcard|all]
   - output a catalog of the loaded disk at the time the command is executed
@@ -132,4 +143,9 @@ example output:
  
  169K free. 60 directory entries free.
 -----------------------------------------------------------------------
-
+show
+  - When this script is complete, show the main form rather than closing.
+  Can be put anywere in the script but if a given script errors before it 
+  reaches this command, it will not be executed, so may be best to put this
+  at the start of the script.
+  

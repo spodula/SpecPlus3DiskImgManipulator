@@ -1,13 +1,11 @@
 package diskviewer;
-//features
 
 import java.io.IOException;
 import java.util.ArrayList;
 
 
 //TODO: Add basic file - Add variables into variable area?
-//TODO: modify Attributes.
-//TOOO: Stop on error in cmd 
+//TODO: modify Attributes in the user interface.
 
 //bugs
 
@@ -56,12 +54,10 @@ public class dskViewer {
 		if (scriptname.isEmpty() && ParamScript.size() == 0) {
 			bmf.loop();
 		} else {
+			bmf.ShowFormAfterScript=false;
 			if (!ParamScript.isEmpty()) {
-				for(String line:ParamScript)
-				{
-					System.out.println("CMD: " + line);
-					bmf.processCommand(line);
-				}
+				String script[] = ParamScript.toArray(new String[ParamScript.size()]);
+				bmf.ExecuteScript(script);
 			}
 			if (!scriptname.isBlank()) {
 				bmf.script(scriptname);
@@ -76,7 +72,15 @@ public class dskViewer {
 					System.out.println(" Disk load error loading " + defaultfile);
 					System.out.println(e.getMessage());
 				}
-
+			if (bmf.ShowFormAfterScript) {
+				if (bmf.CurrentDisk.IsValidCPMFileStructure) {
+					bmf.browser.setText(bmf.pages.GetPage(4, bmf.CurrentDisk));
+				} else {
+					// otherwise, the raw disk structure.
+					bmf.browser.setText(bmf.pages.GetPage(1, bmf.CurrentDisk));
+				}
+				bmf.loop();
+			}
 		}
 	}
 

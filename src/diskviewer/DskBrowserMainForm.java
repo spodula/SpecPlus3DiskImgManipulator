@@ -12,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.eclipse.swt.SWT;
@@ -67,7 +68,7 @@ public class DskBrowserMainForm {
 	private Shell shell = null;
 
 	// Browser object used for output. I know this is lazy, but so am I :)
-	private Browser browser = null;
+	public Browser browser = null;
 
 	// Keep the search dialog, as we may need to close it. it can also remain open.
 	private SearchDialog SearchDialog = null;
@@ -76,7 +77,10 @@ public class DskBrowserMainForm {
 	public PlusThreeDiskWrapper CurrentDisk = new PlusThreeDiskWrapper();
 
 	// Object controlling the pages used for display
-	private PageHandler pages = new PageHandler();
+	public  PageHandler pages = new PageHandler();
+
+	// Flag used in a script to request showing of the UI after complettion
+	public boolean ShowFormAfterScript = false;
 
 	// Constructor allowing to set Verbose
 	public DskBrowserMainForm(boolean VerboseMode) {
@@ -418,7 +422,6 @@ public class DskBrowserMainForm {
 	 * @param scriptname
 	 */
 	public void script(String scriptname) {
-		String line;
 		BufferedReader in;
 
 		File f = new File(scriptname);
@@ -428,27 +431,41 @@ public class DskBrowserMainForm {
 		} else if (!f.canRead()) {
 			System.out.println("Error: " + scriptname + " exists but cannot be read");
 		} else {
+			ArrayList<String> script = new ArrayList<String>();
 			try {
 				in = new BufferedReader(new FileReader(f));
-				line = "";
-				boolean finish = false;
-				while (line != null && !finish) {
-					if (!line.isBlank() && (line.charAt(0) != '#')) {
-						System.out.println("------------------------------------");
-						System.out.println("CMD: " + line);
-						boolean result = processCommand(line);
-						if (!result && StopOnError) {
-							System.out.println("Script terminated due to error.");
-							finish = true;
-						}
+				try {
+					String line = "";
+					while (line != null) {
+						script.add(in.readLine());
+						line = in.readLine();
 					}
-
-					line = in.readLine();
+				} finally {
+					in.close();
 				}
+
 			} catch (IOException e) {
 				System.out.println("Error: " + e.getMessage());
 			}
+			String[] target = script.toArray(new String[script.size()]);
+			ExecuteScript(target);
+		}
+	}
 
+	// run a given script
+	public void ExecuteScript(String[] script) {
+		boolean finish = false;
+		for (int linenum = 0; (linenum < script.length) && !finish; linenum++) {
+			String line = script[linenum];
+			if (!line.isBlank() && (line.charAt(0) != '#')) {
+				System.out.println("------------------------------------");
+				System.out.println("CMD: " + line);
+				boolean result = processCommand(line);
+				if (!result && StopOnError) {
+					System.out.println("Script terminated due to error.");
+					finish = true;
+				}
+			}
 		}
 	}
 
@@ -807,6 +824,40 @@ public class DskBrowserMainForm {
 
 				}
 			}
+		} else if (cmd.equals("attrib")) {
+			if (params.isBlank()) {
+				System.out.println(" Expecting attrib (file) [+|-][WSA]");
+				System.out.println(" Filenames can be a wildcard");
+				System.out.println(" supports multiple attribute modes.");
+				System.out.println("  W (write protect) (Called P in +3 basic)");
+				System.out.println("  S (System)");
+				System.out.println("  A (Archive)");
+				result = false;
+			} else {
+				String param[] = params.split(" ");
+				if (param.length < 2) {
+					System.out.println(" Expecting attrib (file) (Attributes), eg, attrib bob.bas +s -r");
+					System.out.println(" Filenames can be a wildcard");
+					result = false;
+				} else {
+					DirectoryEntry de[] = CurrentDisk.FetchDirEntries(param[0]);
+					if (de == null || de.length == 0) {
+						System.out.println(" File \"" + param[0] + "\" does not exist");
+					} else {
+						for (DirectoryEntry d : de) {
+							for (int dnum = 1; dnum < param.length; dnum++) {
+								String modifier = param[dnum];
+								if (modifier.length() != 2) {
+									System.out.println("Bad attribute: " + modifier);
+								}
+								char mod = modifier.charAt(0);
+								char flag = modifier.charAt(1);
+								d.SetFlag(mod == '+', flag);
+							}
+						}
+					}
+				}
+			}
 		} else if (cmd.equals("undelete")) {
 			if (params.isBlank()) {
 				System.out.println(" Expecting undelete (file)");
@@ -833,16 +884,16 @@ public class DskBrowserMainForm {
 			}
 		} else if (cmd.equals("cat")) {
 			DirectoryEntry folder[] = CurrentDisk.DirectoryEntries;
-			boolean incDeleted=false;
-			
+			boolean incDeleted = false;
+
 			System.out.println("Directory of disk " + CurrentDisk.LastFileName);
 			if (!params.isBlank()) {
 				if (params.toLowerCase().equals("all")) {
 					incDeleted = true;
 					System.out.println("All files including deleted files.");
 				} else {
-				folder = CurrentDisk.FetchDirEntries(params);
-				System.out.println("files named: " + params);
+					folder = CurrentDisk.FetchDirEntries(params);
+					System.out.println("files named: " + params);
 				}
 			} else {
 				System.out.println("All files");
@@ -853,25 +904,25 @@ public class DskBrowserMainForm {
 			System.out.println("---------------------------------------------------");
 			for (DirectoryEntry d : folder) {
 				if (!d.IsDeleted || incDeleted) {
-					System.out.print(padto(d.filename(), 14)); 
+					System.out.print(padto(d.filename(), 14));
 					System.out.print(padto(String.valueOf(d.GetFileSize()), 8));
 
-					if (d.IsDeleted) { 
+					if (d.IsDeleted) {
 						System.out.print("(Del)");
 					} else {
-					char attribs[] = new char[5];
-					for (int x = 0; x < attribs.length; x++)
-						attribs[x] = ' ';
+						char attribs[] = new char[5];
+						for (int x = 0; x < attribs.length; x++)
+							attribs[x] = ' ';
 
-					if (d.dirents[0].GetReadOnly())
-						attribs[0] = 'R';
-					if (d.dirents[0].GetSystem())
-						attribs[1] = 'S';
-					if (d.dirents[0].GetArchive())
-						attribs[2] = 'A';
-					System.out.print(String.valueOf(attribs));
+						if (d.dirents[0].GetReadOnly())
+							attribs[0] = 'R';
+						if (d.dirents[0].GetSystem())
+							attribs[1] = 'S';
+						if (d.dirents[0].GetArchive())
+							attribs[2] = 'A';
+						System.out.print(String.valueOf(attribs));
 					}
-					
+
 					Plus3DosFileHeader hdr = d.GetPlus3DosHeader();
 					if (hdr == null || !hdr.IsPlusThreeDosFile) {
 						System.out.print(" CPM ");
@@ -908,6 +959,8 @@ public class DskBrowserMainForm {
 			int numdirentsfree = CurrentDisk.maxDirEnts - CurrentDisk.usedDirEnts;
 			System.out.println(numdirentsfree + " directory entries free.");
 
+		} else if (cmd.equals("show")) {
+			ShowFormAfterScript = true;
 		} else if (cmd.equals("addnumericarray")) {
 			if (params.isBlank()) {
 				System.out.println(" Expecting addnumericarray (filename)");

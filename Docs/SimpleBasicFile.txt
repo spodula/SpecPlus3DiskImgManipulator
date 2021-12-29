@@ -1,18 +1,18 @@
 This is a simple raw file used as an example to code to. 
 
-# Basic file:
+Basic file:
 10     LET a=10(10.0)
 20     LET b=10.1(10.100000001490116)
 30 	   LET A$="fred"
 
 This has been run and the three variables are set. 
 
-# Raw file:
+Raw file:
 00-07 50 4c 55 53 33 44 4f 53  - "PLUS3DOS"
 08: 1A SofEOF=0x1A
 09: 01 Issue: 1
 0A: 00 Version 0
-0B-0E: C4 00 00 00  = file size = 196 bytes (128 bytes of +3DOS header and 68 bytes of actual speccy program)
+0B-0E: C4 00 00 00  = file size = 196 bytes
 ----------
 ;BASIC header
 ----------
@@ -25,11 +25,10 @@ This has been run and the three variables are set.
 13: 80 } start line: 32768 (not set)
 ----------
 14: 31 }
-15: 00 } Program offset: 49  (start of Variables area within the program area)
+15: 00 } Program offset: 49  (start of Variables area)
 ----------
 7F: F6 Checksum:
 
-Start of the program area (0x80)
 ---------------------------
 0080: 00 0A 0C 00 F1 61 3D 31 30 0E 00 00 0A 00 00 0D
 	00 0A: Line num: 10
@@ -61,7 +60,7 @@ Start of the program area (0x80)
     22 66 72 65 64 22 : "fred"
     0D: end of line
 
-;Start of variables as in program offset.  (0x31+0x80 = 0xB1)
+;Start of variables as in program offset. 
 00B1: 61  01100001 =number, Single byte name, name = a (00001 + 0x60)
 00B2: 00 00 0A 00 00: Integer, value=10
 00B7: 62  01100010 =number, Single byte name, name = b (00010 + 0x60)

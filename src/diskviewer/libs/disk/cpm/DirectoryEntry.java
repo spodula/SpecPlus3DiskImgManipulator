@@ -174,9 +174,9 @@ public class DirectoryEntry {
 		// Load the first block of the file
 		Plus3DosFileHeader pdh = null;
 		int[] blocks = getBlocks();
-		//this fisex an issue with zero length CPM files. 
-		//we will just return an invalid +3 data structure. 
-		//Eg, the alcatraz development disks, "New word" side A
+		// this fisex an issue with zero length CPM files.
+		// we will just return an invalid +3 data structure.
+		// Eg, the alcatraz development disks, "New word" side A
 		if (blocks.length == 0) {
 			pdh = new Plus3DosFileHeader(new byte[256]);
 		} else {
@@ -228,13 +228,64 @@ public class DirectoryEntry {
 		}
 		// update the deleted flag
 		IsDeleted = deleted;
+		// fix sectors
+		updateDirentSector();
+		// update the BAM.
+		int blocks[] = getBlocks();
+		for (int i = 0; i < blocks.length; i++) {
+			int blocknum = blocks[i];
+			if (deleted) {
+				ThisDisk.bam[blocknum] = false;
+			} else {
+				if (ThisDisk.bam[blocknum]) {
+					System.out.println("Warning! Block " + blocknum + " Already in use!");
+				} else {
+					ThisDisk.bam[blocknum] = true;
+				}
+			}
+		}
+		ThisDisk.setModified(true);
+	}
+
+	/**
+	 * set the write protect / system / archive flag
+	 * 
+	 * @param value - new flag value
+	 * @param flag  - which flag (R/S/A)
+	 */ 
+	public void SetFlag(boolean value, char flag) {
+		int bytenum = "RSArsa".indexOf(flag);
+		if (bytenum > 2)
+			bytenum = bytenum - 3;
+		if (bytenum == -1)
+			System.out.println("Unknown attribute: " + flag);
+		else {
+			// set the dirents
+			bytenum = bytenum + 9;
+			for (Dirent d : dirents) {
+				if (value) {
+					d.rawdirent[bytenum] = (byte) ((int) (d.rawdirent[bytenum] | 0x80) & 0xff);
+				} else {
+					d.rawdirent[bytenum] = (byte) ((int) (d.rawdirent[bytenum] & 0x7f));
+				}
+			}
+		}
+
+		// fix sectors
+		updateDirentSector();
+		ThisDisk.setModified(true);
+
+	}
+
+	/**
+	 * update the sector containing the BAM
+	 */
+	private void updateDirentSector() {
 		// update the sectors.
 		int DirentsPerSector = ThisDisk.sectorSize / 32;
 		for (Dirent d : dirents) {
 			int sectornum = d.entrynum / DirentsPerSector;
 			int locationwithinsector = (d.entrynum % DirentsPerSector) * 32;
-			// System.out.println("Dirent: " + d.entrynum + "Updating s" + sectornum + " loc
-			// " + locationwithinsector);
 			// Assumption: There are always the same number of sectors per track.
 			int track = ThisDisk.reservedTracks;
 			while (sectornum > ThisDisk.numsectors) {
@@ -254,21 +305,6 @@ public class DirectoryEntry {
 				tr.Sectors[sectorindex].data[locationwithinsector] = d.rawdirent[0];
 			}
 		}
-		// update the BAM.
-		int blocks[] = getBlocks();
-		for (int i = 0; i < blocks.length; i++) {
-			int blocknum = blocks[i];
-			if (deleted) {
-				ThisDisk.bam[blocknum] = false;
-			} else {
-				if (ThisDisk.bam[blocknum]) {
-					System.out.println("Warning! Block " + blocknum + " Already in use!");
-				} else {
-					ThisDisk.bam[blocknum] = true;
-				}
-			}
-		}
-		ThisDisk.setModified(true);
 	}
 
 	/**

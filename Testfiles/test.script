@@ -12,6 +12,8 @@ load /home/graham/dev/disks/basic.dsk
 
 addchararray /home/graham/dev/test.csv
 
+attrib test.csv +A +H -H
+
 cat
 
 delete *.bas
@@ -19,3 +21,5 @@ delete *.bas
 cat 
 
 save /home/graham/dev/disks/basic1.dsk
+
+show
