@@ -373,7 +373,7 @@ public class Speccy {
 	public static void DecodeBasicFromLoadedFile(byte file[], StringBuilder sb, Plus3DosFileHeader header,
 			boolean DisplayValueOnly) {
 		int ptr = 128; // skip the file header
-		int EndOfBasicArea = Math.min(file.length, header.VariablesOffset); 
+		int EndOfBasicArea = Math.min(file.length, header.VariablesOffset+128); 
 		while (ptr < EndOfBasicArea) {
 			int linenum = ((file[ptr++] & 0xff) * 256);
 			linenum = linenum + (file[ptr++] & 0xff);
