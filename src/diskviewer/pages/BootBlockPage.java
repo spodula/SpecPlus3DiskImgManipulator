@@ -61,7 +61,7 @@ public class BootBlockPage extends page {
 		result.append( "</table>\r\n<br>\r\n");
 
 		// Try to disassemble the boot sector.
-		Sector BootSect = disk.Tracks[0].Sectors[0];
+		Sector BootSect = disk.GetLinearTrack(0).Sectors[0];
 		result.append( "<table class=\"hex\">\r\n");
 		result.append( "<tr><th colspan=4>" + "Disassembled boot block " + "</td></tr>\r\n");
 		result.append( "<tr><th>Loaded address</th><th>Hex</th><th>Asm</th><th>chr</th></tr>\r\n");

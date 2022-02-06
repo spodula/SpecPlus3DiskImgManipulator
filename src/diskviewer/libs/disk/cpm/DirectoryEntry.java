@@ -20,7 +20,15 @@ public class DirectoryEntry {
 
 	// is file deleted
 	public boolean IsDeleted = false;
-
+	
+	//if TRUE, the directory entry is invalid.
+	public boolean BadDirEntry = false;
+	
+	//used to validate Dirent. 
+	private int maxBlocks=0;
+	
+	public String Errors="";
+	
 	/**
 	 * Parse and return the filename from the first DIRENT.
 	 * 
@@ -40,10 +48,11 @@ public class DirectoryEntry {
 	 * @param filename
 	 * @param disk
 	 */
-	DirectoryEntry(CPMDiskWrapper disk, boolean IsDeleted) {
+	DirectoryEntry(CPMDiskWrapper disk, boolean IsDeleted, int maxBlocks) {
 		this.ThisDisk = disk;
 		this.IsDeleted = IsDeleted;
 		dirents = new Dirent[0];
+		this.maxBlocks = maxBlocks;
 	}
 
 	/**
@@ -59,6 +68,8 @@ public class DirectoryEntry {
 		}
 		newdirent[dirents.length] = d;
 		dirents = newdirent;
+		//force a recalculation of if the file is valid. 
+		getBlocks();
 	}
 
 	/**
@@ -86,25 +97,50 @@ public class DirectoryEntry {
 	 * file consecutively, i can't find anything in any documentation that actually
 	 * says this.
 	 * 
+	 * Added GDS 06 feb 2022 - Added code to check for bad blocks and extents and 
+	 *  report them and properly ignore them. 
+	 *  This is to fix loading of the Double Dragon disk which seems
+	 *  to rely on this for some form of copy protection.
+	 * 
 	 * @return
 	 */
 	public int[] getBlocks() {
+		BadDirEntry = false;
 		ArrayList<Integer> al = new ArrayList<Integer>();
+		String badExtents="";
+		
+		String badBlocks="";
+		
 		for (int i = 0; i < dirents.length; i++) {
 			Dirent d = getExtentByNum(i);
 			if (d == null) {
-				System.out.println("Bad extent number: " + i + " for " + filename());
+				badExtents = badExtents+", "+i;
 			} else {
 				int blocks[] = d.getBlocks();
 				for (int block : blocks) {
 					if (block != 0) {
+						if (block >= maxBlocks) {
+							badBlocks = badBlocks+", "+block;
+						} 
 						al.add(block);
 					}
 				}
 			}
 		}
+		
+		if (!badExtents.isEmpty()) {
+			Errors = "File is invalid due to missing (Or re-used) directory extents: #"+badExtents.substring(2);
+			BadDirEntry = true;
+		}
+		if (!badBlocks.isEmpty()) {
+			if (!Errors.isBlank()) {
+				Errors= Errors+"\r\n";
+			}
+			Errors= Errors + "File is invalid due to referencing invalid blocks: #"+badBlocks.substring(2);
+			BadDirEntry = true;
+		}
 
-		// now convert the arraylist into a int[] to return
+		// convert the arraylist into a int[] to return
 		int[] result = new int[al.size()];
 		for (int i = 0; i < al.size(); i++) {
 			result[i] = al.get(i);
@@ -174,16 +210,24 @@ public class DirectoryEntry {
 		// Load the first block of the file
 		Plus3DosFileHeader pdh = null;
 		int[] blocks = getBlocks();
-		// this fisex an issue with zero length CPM files.
+		// this fix an issue with zero length CPM files.
 		// we will just return an invalid +3 data structure.
 		// Eg, the alcatraz development disks, "New word" side A
-		if (blocks.length == 0) {
+		if (blocks.length ==0) {
 			pdh = new Plus3DosFileHeader(new byte[256]);
 		} else {
 			byte Block0[] = null;
 			try {
-				Block0 = ThisDisk.GetBlock(blocks[0]);
-				pdh = new Plus3DosFileHeader(Block0);
+				if (blocks[0] >= ThisDisk.maxblocks) {
+					//added for Double Dragon which has a directory entry 
+					//with bad Block numbers, this prevents most of the files
+					//appearing in the directory listing. 
+					System.out.println("Block "+blocks[0]+" does not exist for entry: '"+filename()+"'");
+					pdh = new Plus3DosFileHeader(new byte[256]);
+				} else {
+					Block0 = ThisDisk.GetBlock(blocks[0]);
+					pdh = new Plus3DosFileHeader(Block0);					
+				}
 			} catch (BadDiskFileException e) {
 				System.out.println("Cannot read first block of " + filename() + ".\r\n" + e.getMessage());
 			}
@@ -193,20 +237,24 @@ public class DirectoryEntry {
 
 	/**
 	 * Check to see if the current directory entry is a complete file. Only applies
-	 * to deleted files, Other files are assumed to be complete.
+	 * to deleted files, Other files are assumed to be complete if the entries are complete.
 	 * 
 	 * @return
 	 */
 	public Boolean IsComplete() {
 		if (!IsDeleted) {
-			return (true);
+			return (!BadDirEntry);
 		} else {
 			// Check to see if any of the blocks are marked as in-use by the BAM.
 			boolean result = true;
 			int blocks[] = getBlocks();
 			for (int i : blocks) {
-				if (ThisDisk.bam[i])
+				if (i<ThisDisk.bam.length ) {
+					if (ThisDisk.bam[i])
+						result = false;
+				} else {
 					result = false;
+				}
 			}
 			return (result);
 		}
@@ -292,7 +340,7 @@ public class DirectoryEntry {
 				track++;
 				sectornum = sectornum - ThisDisk.numsectors;
 			}
-			TrackInfo tr = ThisDisk.Tracks[track];
+			TrackInfo tr = ThisDisk.GetLinearTrack(track);
 			int sectorindex = -1;
 			for (int i = 0; i < tr.Sectors.length; i++) {
 				if (tr.Sectors[i].sectorID == sectornum + tr.minsectorID) {
@@ -330,7 +378,7 @@ public class DirectoryEntry {
 				track++;
 				sectornum = sectornum - ThisDisk.numsectors;
 			}
-			TrackInfo tr = ThisDisk.Tracks[track];
+			TrackInfo tr = ThisDisk.GetLinearTrack(track);
 			int sectorindex = -1;
 			for (int i = 0; i < tr.Sectors.length; i++) {
 				if (tr.Sectors[i].sectorID == sectornum + tr.minsectorID) {

@@ -113,7 +113,12 @@ public class FileSystemPage extends page {
 			for (i = 0; i < disk.DirectoryEntries.length; i++) {
 				int blocks[] = disk.DirectoryEntries[i].getBlocks();
 				for (int block : blocks) {
-					bam[block] = i + 1;
+					//added for Double Dragon which has a directory entry 
+					//with bad Block numbers, this prevents most of the files
+					//appearing in the directory listing. 
+					if (block < bam.length) {
+						bam[block] = i + 1;
+					}
 				}
 			}
 

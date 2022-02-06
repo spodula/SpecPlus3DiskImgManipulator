@@ -74,8 +74,6 @@ import diskviewer.libs.disk.TrackInfo;
 
 public class CPMDiskWrapper extends AMSDiskWrapper {
 	public int disktype = 0; // 0=SS SD 3= DSDD
-	public int numsides = 0; // Sides (Almost always 1 for +3 disks)
-	public int numtracks = 0; // tracks (usually 40)
 	public int numsectors = 0; // Sectors per track (9)
 	public int sectorPow = 0; // Sector size represented by its (power of 2)+7, (usually 2 meaning 512 bytes)
 	public int sectorSize = 0; // Calculated sector size from above (512)
@@ -137,7 +135,7 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 				}
 				// If we have not found a file, create a new one.
 				if (file == null) {
-					file = new DirectoryEntry(this, (dType == Dirent.DIRENT_DELETED));
+					file = new DirectoryEntry(this, (dType == Dirent.DIRENT_DELETED), this.maxblocks);
 					Directorynum = nextdirentry++;
 				}
 				file.addDirent(d);
@@ -149,9 +147,17 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 		for (int i = 0; i < nextdirentry; i++) {
 			DirectoryEntries[i] = direntries[i];
 		}
+		//finally output any errors:
+		for(DirectoryEntry d:DirectoryEntries) {
+			if (!d.Errors.isEmpty()) {
+				System.out.println("Filename: '"+d.filename()+"' - "+d.Errors);
+			}
+		}
+		
 	}
 
 	/**
+	 * 
 	 * load the given disk. This calls the lower level AMS disk loader, then parses
 	 * the CPM related information out of it if possible.
 	 * 
@@ -177,10 +183,10 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 	 */
 	public void ParseData() {
 		try {
-
-			Sector BootSect = Tracks[0].GetSectorBySectorID(Tracks[0].minsectorID);
+			TrackInfo Track0 = GetTrack(0, 0);
+			Sector BootSect = Track0.GetSectorBySectorID(Track0.minsectorID);
 			// Parse out the boot block.
-			if (Tracks[0].minsectorID == 1) { // first sector=1 PCW/+3
+			if (Track0.minsectorID == 1) { // first sector=1 PCW/+3
 				// if we have an invalid bootsector fiddle the data
 				// fix GDS 22 Dec 2021 - Valid values for byte 1 are 0-3 only. This makes the
 				// Khobrasoft SP7 disk load (Fossr some reaosn passed with b0 in sector 1)
@@ -206,7 +212,7 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 					disktype = 0;
 					numsides = this.GetDiskInfo().sides;
 					numtracks = this.GetDiskInfo().tracks;
-					numsectors = this.Tracks[0].Sectors.length;
+					numsectors = Track0.Sectors.length;
 					sectorPow = 2;
 					sectorSize = 512;
 					reservedTracks = 1;
@@ -218,12 +224,12 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 					fiddleByte = 0;
 				}
 				diskformat = "PCW/+3";
-			} else if (Tracks[0].minsectorID == 0x41) { // CPC system disk
+			} else if (Track0.minsectorID == 0x41) { // CPC system disk
 				diskformat = "CPC System";
 				disktype = 0;
 				numsides = this.GetDiskInfo().sides;
 				numtracks = this.GetDiskInfo().tracks;
-				numsectors = this.Tracks[0].Sectors.length;
+				numsectors = Track0.Sectors.length;
 				sectorPow = 2;
 				sectorSize = 512;
 				reservedTracks = 2;
@@ -233,12 +239,12 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 				rwGapLength = 0x2a;
 				fmtGapLength = 0x52;
 				fiddleByte = 0;
-			} else if (Tracks[0].minsectorID == 0xC1) { // CPC data disk. (No boot track)
+			} else if (Track0.minsectorID == 0xC1) { // CPC data disk. (No boot track)
 				diskformat = "CPC Data";
 				disktype = 0;
 				numsides = this.GetDiskInfo().sides;
 				numtracks = this.GetDiskInfo().tracks;
-				numsectors = this.Tracks[0].Sectors.length;
+				numsectors = Track0.Sectors.length;
 				sectorPow = 2;
 				sectorSize = 512;
 				reservedTracks = 0;
@@ -250,6 +256,10 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 				fiddleByte = 0;
 			}
 
+			// For some reason, this is occasionally not populated.
+			if (numsides == 0) {
+				numsides = 1;
+			}
 			DiskInfo di = GetDiskInfo();
 
 			log("CPM data:");
@@ -275,12 +285,22 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 
 			// load the directory block
 			int track = reservedTracks;
-			int sector = Tracks[track].minsectorID;
+			TrackInfo FirstDirTrack = GetLinearTrack(track);
+			int sector = FirstDirTrack.minsectorID;
 
+			IsValidCPMFileStructure = true;
 			// +3 disk sectors are always 512. If they are not, something funky is
-			// happening so don't try to parse directory entries.
-			Sector FirstSector = Tracks[track].GetSectorBySectorID(sector);
-			IsValidCPMFileStructure = (FirstSector.data.length == 512);
+			// happening so don't try to parse directory entries. So check first 10 or so
+			// tracks (To avoid any copy protection on higher tracks)
+			for (int tracknum = 0; tracknum < 20; tracknum++) {
+				TrackInfo tr = GetLinearTrack(tracknum);
+				for (Sector s : tr.Sectors) {
+					if (s.ActualSize != 512) {
+						IsValidCPMFileStructure = false;
+					}
+				}
+			}
+			Sector FirstSector = FirstDirTrack.GetSectorBySectorID(sector);
 			if (!IsValidCPMFileStructure)
 				System.out.println("Invalid CPM file structure (Sector size not valid for CPM)");
 
@@ -289,7 +309,7 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 			// This is either: all filler bytes, or byte 0=0,1-13 = ascii characters,
 			boolean allFiller = true;
 			for (int i = 0; i < 32; i++) {
-				if (FirstSector.data[i] != Tracks[track].fillerByte) {
+				if (FirstSector.data[i] != FirstDirTrack.fillerByte) {
 					allFiller = false;
 				}
 			}
@@ -337,7 +357,7 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 
 				byte directory[] = new byte[DirectoryBlockSectors * sectorSize];
 				for (int i = 0; i < DirectoryBlockSectors; i++) {
-					Sector s = Tracks[track].GetSectorBySectorID(sector);
+					Sector s = GetLinearTrack(track).GetSectorBySectorID(sector);
 					// copy sector
 					for (byte x : s.data) {
 						directory[loc++] = x;
@@ -345,9 +365,9 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 					// select next sector. if we run out of sectors in a track, select the next
 					// track.
 					sector++;
-					if (sector == Tracks[track].maxsectorID + 1) {
+					if (sector == GetLinearTrack(track).maxsectorID + 1) {
 						track++;
-						sector = Tracks[track].minsectorID;
+						sector = GetLinearTrack(track).minsectorID;
 					}
 				}
 				// now we have the directory block loaded, we need to split it into dirents.
@@ -384,9 +404,9 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 					boolean isdeleted = (d.getType() == Dirent.DIRENT_DELETED);
 					if (!isdeleted) {
 						for (int i : blocks) {
-							if (i >= bam.length) {
-								System.out.println("Too many Bam entries!");
-							} else {
+							//used to output an error here, but detecting invalid blocks
+							//is now done by the directory structure. 
+							if (i < bam.length) {
 								bam[i] = true;
 							}
 							usedblocks++;
@@ -418,32 +438,44 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 	 */
 	public byte[] GetBlock(int blockid) throws BadDiskFileException {
 		byte result[] = new byte[blockSize];
-
-		int sectorsPerBlock = blockSize / sectorSize;
-		// Convert the block into a sector
-		int logicalsector = blockid * sectorsPerBlock;
-
-		// calculate the cs. Note, we dont need to bother calculating head because its
-		// already head order
-		int track = (logicalsector / numsectors) + reservedTracks;
-		track = track / GetDiskInfo().sides;
-		int sector = (logicalsector % numsectors);
-
-		// Copy each sector to the block
-		int resultPtr = 0;
-		for (int i = 0; i < sectorsPerBlock; i++) {
-			// get the current sector
-			TrackInfo CurrTrack = Tracks[track];
-			Sector CurrSector = CurrTrack.GetSectorBySectorID(sector + CurrTrack.minsectorID);
-			// Copy the data
-			for (byte x : CurrSector.data) {
-				result[resultPtr++] = x;
+		if (blockid >= maxblocks) {
+			byte[] txt = "INVALID ".getBytes();
+			int i=0;
+			int ptr=0;
+			while (ptr < blockSize) {
+				result[ptr++] = txt[i++];
+				if (i==txt.length) {
+					i = 0;
+				}
 			}
-			// Select the next sector.
-			sector++;
-			if (sector == CurrTrack.Sectors.length) {
-				track++;
-				sector = 0;
+		} else {
+
+			int sectorsPerBlock = blockSize / sectorSize;
+			// Convert the block into a sector
+			int logicalsector = blockid * sectorsPerBlock;
+
+			// calculate the cs. Note, we dont need to bother calculating head because its
+			// already head order
+			int track = (logicalsector / numsectors) + reservedTracks;
+			track = track / GetDiskInfo().sides;
+			int sector = (logicalsector % numsectors);
+
+			// Copy each sector to the block
+			int resultPtr = 0;
+			for (int i = 0; i < sectorsPerBlock; i++) {
+				// get the current sector
+				TrackInfo CurrTrack = GetLinearTrack(track);
+				Sector CurrSector = CurrTrack.GetSectorBySectorID(sector + CurrTrack.minsectorID);
+				// Copy the data
+				for (byte x : CurrSector.data) {
+					result[resultPtr++] = x;
+				}
+				// Select the next sector.
+				sector++;
+				if (sector == CurrTrack.Sectors.length) {
+					track++;
+					sector = 0;
+				}
 			}
 		}
 		return (result);
@@ -470,7 +502,7 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 		int ptr = start;
 		for (int i = 0; i < sectorsPerBlock; i++) {
 			// get the current sector
-			TrackInfo CurrTrack = Tracks[track];
+			TrackInfo CurrTrack = GetLinearTrack(track);
 			Sector CurrSector = CurrTrack.GetSectorBySectorID(sector + CurrTrack.minsectorID);
 			// Copy the data
 			for (int j = 0; j < CurrSector.data.length; j++) {
@@ -664,10 +696,11 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 	 */
 	private void DirentsToSectors() {
 		int track = reservedTracks;
-		int sectorID = Tracks[track].minsectorID;
+		TrackInfo direntTrack = GetLinearTrack(track);
+		int sectorID = direntTrack.minsectorID;
 		int sectorptr = 0;
 
-		Sector sector = Tracks[track].GetSectorBySectorID(sectorID);
+		Sector sector = GetLinearTrack(track).GetSectorBySectorID(sectorID);
 
 		for (Dirent d : dirents) {
 			for (int i = 0; i < 0x20; i++) {
@@ -677,11 +710,12 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 				// Select the next sector.
 				sectorptr = 0;
 				sectorID++;
-				if (sectorID == Tracks[track].numsectors) {
-					sectorID = Tracks[track].minsectorID;
+				if (sectorID > direntTrack.maxsectorID) {
 					track++;
+					direntTrack = GetLinearTrack(track);
+					sectorID = direntTrack.minsectorID;
 				}
-				sector = Tracks[track].GetSectorBySectorID(sectorID);
+				sector = direntTrack.GetSectorBySectorID(sectorID);
 			}
 		}
 	}
@@ -720,7 +754,8 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 		CreateAMSDisk(tracks, heads, spt, minsector, IsExtended, ADFHeader, fillerbyte);
 		// write the bootsector
 		if (bootSector != null) {
-			Sector s = Tracks[0].GetSectorBySectorID(Tracks[0].minsectorID);
+			TrackInfo track00 = GetLinearTrack(0);
+			Sector s = track00.GetSectorBySectorID(track00.minsectorID);
 			for (int i = 0; i < bootSector.length; i++) {
 				s.data[i] = bootSector[i];
 			}
@@ -789,19 +824,19 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 
 		// now search.
 		for (DirectoryEntry de : DirectoryEntries) {
-				// check the filename
-				boolean match = true;
-				for (int i = 0; i < 11; i++) {
-					byte chr = de.dirents[0].rawdirent[i + 1];
-					byte cchr = comp[i];
-					if ((chr != cchr) && (cchr != '?')) {
-						match = false;
-					}
-				}
-				if (match) {
-					results.add(de);
+			// check the filename
+			boolean match = true;
+			for (int i = 0; i < 11; i++) {
+				byte chr = de.dirents[0].rawdirent[i + 1];
+				byte cchr = comp[i];
+				if ((chr != cchr) && (cchr != '?')) {
+					match = false;
 				}
 			}
+			if (match) {
+				results.add(de);
+			}
+		}
 
 		DirectoryEntry res[] = new DirectoryEntry[results.size()];
 		res = results.toArray(res);

@@ -63,19 +63,19 @@ public class TrackSummaryPage extends page {
 			result.append("</table>\r\n");
 
 			// Show the selected track.
-			int ch = CurrentTrack * di.sides + CurrentSide;
-			TrackInfo CurrentTrack = disk.Tracks[ch];
+			
+			TrackInfo ct = disk.GetTrack(CurrentTrack,CurrentSide);
 
-			result.append("<br><h2>Track " + String.valueOf(CurrentTrack.tracknum) + " Side "
-					+ String.valueOf(CurrentTrack.side) + "</h2>\r\n");
+			result.append("<br><h2>Track " + String.valueOf(ct.tracknum) + " Side "
+					+ String.valueOf(ct.side) + "</h2>\r\n");
 
 			// iterate all the sectors:
 			// Note that sectors are not consecutive and in copy protected disks, can be
 			// missing.
 			// We will ignore any sectors that dont exist.
 
-			for (int sectnum = CurrentTrack.minsectorID; sectnum < CurrentTrack.maxsectorID + 1; sectnum++) {
-				Sector Sector = CurrentTrack.GetSectorBySectorID(sectnum);
+			for (int sectnum = ct.minsectorID; sectnum < ct.maxsectorID + 1; sectnum++) {
+				Sector Sector = ct.GetSectorBySectorID(sectnum);
 				if (Sector != null) {
 
 					if (!LastAsm) {

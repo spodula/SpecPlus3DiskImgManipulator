@@ -71,54 +71,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class AMSDiskWrapper {
+public class AMSDiskWrapper extends DiskWrapper {
 	public static int SECTORSIZE = 512;
-	public static String CREATOR = "Plus3DiskEditr";
-
-	public String LastFileName = "";
-
-	// used to give lots of output during debugging.
-	public boolean VerboseMode = true;
-
-	// if TRUE, a valid disk is loaded
-	public boolean IsValid = false;
-
+	
 	// Copy of the disk information block at the start of the DSK file
 	private byte DiskInfoBlock[] = new byte[256];
 
 	// Parsed version of above.
 	private DiskInfo ParsedDiskInfo = null;
 
-	// Tracks in the file.
-	public TrackInfo Tracks[] = null;
-
-	// ******************************************
-	// Modify tracking and callbacks
-	// ******************************************
-	// Modify event callback
-	public ModifiedEvent OnModify = null;
-
-	// private storage as to the current state
-	private boolean DiskModified = false;
-
-	// get modified
-	public boolean getModified() {
-		return (DiskModified);
-	}
-
-	// Update modified.
-	public void setModified(boolean Modified) {
-		DiskModified = Modified;
-		if (OnModify != null) {
-			OnModify.ModifiedChanged();
-		}
-	}
-
-	public void log(String s) {
-		if (VerboseMode) {
-			System.out.println(s);
-		}
-	}
 
 	/**
 	 * Load a file..
@@ -127,13 +88,14 @@ public class AMSDiskWrapper {
 	 * @throws BadDiskFileException
 	 * @throws IOException
 	 */
+	@Override
 	public void load(String filename) throws BadDiskFileException, IOException {
+		super.load(filename);
 		log("AmsDiskWrapper: Loading " + filename);
-		LastFileName = filename;
 		InputStream in = new FileInputStream(filename);
 		try {
 			// Read the ADF Disk info block into a bit of memory
-			// This bit is adlways 256 bytes long.
+			// This bit is always 256 bytes long.
 			DiskInfoBlock = in.readNBytes(256);
 			if (DiskInfoBlock.length != 256) {
 					throw new BadDiskFileException("Disk file not big enough");
@@ -142,11 +104,16 @@ public class AMSDiskWrapper {
 			ParsedDiskInfo = new DiskInfo(DiskInfoBlock);
 			log("AmsDiskWrapper: Read and parsed AMS disk info block.");
 			log("AmsDiskWrapper: " + ParsedDiskInfo.toString());
+			numtracks = ParsedDiskInfo.tracks;
+			numsides = ParsedDiskInfo.sides;
+			CREATOR = ParsedDiskInfo.Creator;
+			
+			
 
 			// Allocate enough space for all the tracks on both sides of the disk.
 			// (+3 disks are usually single sided, but you can do funky things
 			// with 720K disks so lets not assume Single sided)
-			Tracks = new TrackInfo[ParsedDiskInfo.tracks * ParsedDiskInfo.sides];
+			diskTracks = new TrackInfo[numsides * numtracks];
 			int Tracknum = 0;
 			log("AmsDiskWrapper: Allocated " + String.valueOf(ParsedDiskInfo.tracks * ParsedDiskInfo.sides)
 					+ " slots for tracks. (cyl*head)");
@@ -249,7 +216,7 @@ public class AMSDiskWrapper {
 				} else {
 					System.out.print(".");
 				}
-				Tracks[Tracknum++] = CurrentTrack;
+				diskTracks[Tracknum++] = CurrentTrack;
 			}
 			System.out.println(" " + String.valueOf(Tracknum) + " tracks");
 
@@ -278,7 +245,9 @@ public class AMSDiskWrapper {
 	 * @param filename
 	 * @throws IOException
 	 */
+	@Override
 	public void save(String filename) throws IOException {
+		super.save(filename);
 		int numtracks = 0;
 		int numsectors = 0;
 		FileOutputStream fos = new FileOutputStream(filename);
@@ -286,7 +255,7 @@ public class AMSDiskWrapper {
 			// write the AMS header
 			fos.write(DiskInfoBlock);
 			// now write every track in sequence
-			for (TrackInfo track : Tracks) {
+			for (TrackInfo track : diskTracks) {
 				// Create the track-info
 				byte TrackInfoBlock[] = new byte[0x100];
 				for (int i = 0; i < 12; i++) {
@@ -380,7 +349,7 @@ public class AMSDiskWrapper {
 		try {
 			ParsedDiskInfo = new DiskInfo(DiskInfoBlock);
 
-			Tracks = new TrackInfo[tracks * heads];
+			diskTracks = new TrackInfo[tracks * heads];
 
 			// write each track.
 			for (int tracknum = 0; tracknum < tracks; tracknum++) {
@@ -419,7 +388,7 @@ public class AMSDiskWrapper {
 						}
 						newtrack.Sectors[sectnum] = NewSector;
 					}
-					Tracks[(tracknum * heads) + headnum] = newtrack;
+					diskTracks[(tracknum * heads) + headnum] = newtrack;
 				} // headnum
 			} // tracknum
 		} catch (BadDiskFileException e) {

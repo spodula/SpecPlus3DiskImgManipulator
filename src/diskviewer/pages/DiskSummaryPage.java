@@ -48,7 +48,7 @@ public class DiskSummaryPage extends page {
 			              "<th>Recording mode</th>" +
 			              "</tr>\r\n");
 			
-			for (TrackInfo t : disk.Tracks) {
+			for (TrackInfo t : disk.diskTracks) {
 				result.append("<tr>" +
 	              "<td>"+String.valueOf(t.tracknum)+"</td>" +
 	              "<td>"+String.valueOf(t.side)+"</td>" +

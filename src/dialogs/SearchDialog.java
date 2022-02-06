@@ -183,8 +183,7 @@ public class SearchDialog extends DiskReaderDialog {
 		int numresult = 0;
 		ResultList.removeAll();
 		ArrayList<SearchResult> searchr = new ArrayList<SearchResult>();
-
-		for (TrackInfo t : CurrentDisk.Tracks) {
+		for (TrackInfo t : CurrentDisk.diskTracks) {
 			for (Sector s : t.Sectors) {
 				if (numresult < 100) {
 					int i = CompareBytesAndString(s.data, text, ignorecase);
