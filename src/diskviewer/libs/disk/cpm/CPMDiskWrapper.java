@@ -292,7 +292,8 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 			// +3 disk sectors are always 512. If they are not, something funky is
 			// happening so don't try to parse directory entries. So check first 10 or so
 			// tracks (To avoid any copy protection on higher tracks)
-			for (int tracknum = 0; tracknum < 20; tracknum++) {
+			//GDS 7 Feb 2022 - Fix for DOuble dragon Side 2 which only has 11 sectors in the file.
+			for (int tracknum = 0; tracknum < Math.min(20, numtracks); tracknum++) {
 				TrackInfo tr = GetLinearTrack(tracknum);
 				for (Sector s : tr.Sectors) {
 					if (s.ActualSize != 512) {
