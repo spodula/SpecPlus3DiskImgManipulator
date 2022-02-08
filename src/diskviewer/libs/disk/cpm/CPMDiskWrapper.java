@@ -147,13 +147,13 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 		for (int i = 0; i < nextdirentry; i++) {
 			DirectoryEntries[i] = direntries[i];
 		}
-		//finally output any errors:
-		for(DirectoryEntry d:DirectoryEntries) {
+		// finally output any errors:
+		for (DirectoryEntry d : DirectoryEntries) {
 			if (!d.Errors.isEmpty()) {
-				System.out.println("Filename: '"+d.filename()+"' - "+d.Errors);
+				System.out.println("Filename: '" + d.filename() + "' - " + d.Errors);
 			}
 		}
-		
+
 	}
 
 	/**
@@ -286,143 +286,162 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 			// load the directory block
 			int track = reservedTracks;
 			TrackInfo FirstDirTrack = GetLinearTrack(track);
-			int sector = FirstDirTrack.minsectorID;
-
-			IsValidCPMFileStructure = true;
-			// +3 disk sectors are always 512. If they are not, something funky is
-			// happening so don't try to parse directory entries. So check first 10 or so
-			// tracks (To avoid any copy protection on higher tracks)
-			//GDS 7 Feb 2022 - Fix for DOuble dragon Side 2 which only has 11 sectors in the file.
-			for (int tracknum = 0; tracknum < Math.min(20, numtracks); tracknum++) {
-				TrackInfo tr = GetLinearTrack(tracknum);
-				for (Sector s : tr.Sectors) {
-					if (s.ActualSize != 512) {
-						IsValidCPMFileStructure = false;
-					}
-				}
-			}
-			Sector FirstSector = FirstDirTrack.GetSectorBySectorID(sector);
-			if (!IsValidCPMFileStructure)
-				System.out.println("Invalid CPM file structure (Sector size not valid for CPM)");
-
-			// As an extra check, make sure there is sensible data in the first directory
-			// entry.
-			// This is either: all filler bytes, or byte 0=0,1-13 = ascii characters,
-			boolean allFiller = true;
-			for (int i = 0; i < 32; i++) {
-				if (FirstSector.data[i] != FirstDirTrack.fillerByte) {
-					allFiller = false;
-				}
-			}
-			if (!allFiller) {
-				int firstbyte = FirstSector.data[0] & 0xff;
-				// first byte 0-31 = user num of valid file, 0xe5 = deleted file
-				if ((firstbyte != 0xe5) && firstbyte > 31) {
-					IsValidCPMFileStructure = false;
-				} else {
-
-					// Check for a valid filename
-					for (int i = 1; i < 12; i++) {
-						char c = (char) (FirstSector.data[i] & 0x7f);
-						if (c != 0xe5) {
-							// Flags appear on bit 7 on the extensions, shouldnt appear elsewere.
-							if (((FirstSector.data[i] & 0x80) != 0) && i < 9) {
-								IsValidCPMFileStructure = false;
-							}
-							// Check the rest of the characters
-							if (!CPM.CharIsCPMValid(c) && c != ' ')
-								IsValidCPMFileStructure = false;
-						}
-					}
-
-				}
-				if (!IsValidCPMFileStructure)
-					System.out.println("Invalid CPM file structure (First Directory entry is invalid)");
-			}
-
-			// if we havent already decided the disk is invalid, parse out the BAM and
-			// DIRENTS.
-			if (IsValidCPMFileStructure) {
-				int loc = 0;
-				// set up the Block availability map.
-				bam = new boolean[maxblocks];
-				for (int i = 0; i < maxblocks; i++) {
-					bam[i] = false;
-				}
-				// add in the reserved blocks
-				for (int i = 0; i < reservedblocks; i++) {
-					bam[i] = true;
-				}
-
-				int DirectoryBlockSectors = (blockSize / sectorSize) * dirBlocks;
-
-				byte directory[] = new byte[DirectoryBlockSectors * sectorSize];
-				for (int i = 0; i < DirectoryBlockSectors; i++) {
-					Sector s = GetLinearTrack(track).GetSectorBySectorID(sector);
-					// copy sector
-					for (byte x : s.data) {
-						directory[loc++] = x;
-					}
-					// select next sector. if we run out of sectors in a track, select the next
-					// track.
-					sector++;
-					if (sector == GetLinearTrack(track).maxsectorID + 1) {
-						track++;
-						sector = GetLinearTrack(track).minsectorID;
-					}
-				}
-				// now we have the directory block loaded, we need to split it into dirents.
-				usedDirEnts = 0;
-				int numDirEnts = (DirectoryBlockSectors * sectorSize) / 32;
-				dirents = new Dirent[numDirEnts];
-				int address = 0;
-				for (int i = 0; i < numDirEnts; i++) {
-					Dirent d = new Dirent(i);
-					d.LoadDirentFromArray(directory, address);
-					d.Is16BitBlockID = (maxblocks > 255);
-					dirents[i] = d;
-					if ((d.getType() != Dirent.DIRENT_UNUSED) && (d.getType() != Dirent.DIRENT_DELETED)) {
-						usedDirEnts++;
-					}
-					address = address + 32;
-				}
-
-				// Convert the DIRENTS into a directory listing.
-				RecalculateDirectoryListing();
-
-				// calculate the disk size in Kbytes
-				diskSize = blockSize * (maxblocks - reservedblocks) / 1024;
-
-				// populate the BAM from the dirents
-				// firstly from the reserved (Directory) blocks
-				usedblocks = reservedblocks;
-				for (int i = 0; i < reservedblocks; i++) {
-					bam[i] = true;
-				}
-				// now from the files
-				for (Dirent d : dirents) {
-					int blocks[] = d.getBlocks();
-					boolean isdeleted = (d.getType() == Dirent.DIRENT_DELETED);
-					if (!isdeleted) {
-						for (int i : blocks) {
-							//used to output an error here, but detecting invalid blocks
-							//is now done by the directory structure. 
-							if (i < bam.length) {
-								bam[i] = true;
-							}
-							usedblocks++;
-						}
-					}
-				}
-
-				// calculate the space left.
-				freeSpace = (maxblocks - usedblocks) * blockSize / 1024;
-			} else {
+			if (FirstDirTrack == null) {
+				IsValidCPMFileStructure = false;
 				DirectoryEntries = null;
 				bam = null;
 				usedblocks = 0;
 				dirBlocks = 0;
 				freeSpace = 0;
+			} else {
+
+				int sector = FirstDirTrack.minsectorID;
+
+				IsValidCPMFileStructure = true;
+				// +3 disk sectors are always 512. If they are not, something funky is
+				// happening so don't try to parse directory entries. So check first 10 or so
+				// tracks (To avoid any copy protection on higher tracks)
+				// GDS 7 Feb 2022 - Fix for DOuble dragon Side 2 which only has 11 sectors in
+				// the file.
+				// GDS 7 Feb 2022 - Fixed bubble bobble image where blank tracks are not on the
+				// disk.
+				// GDS 8 Feb 2022 - Fixed KSFT SP7 image where track 0 contains protection. Should start from valid tracks
+				for (int tracknum = reservedTracks; tracknum < Math.min(20, numtracks); tracknum++) {
+					TrackInfo tr = GetLinearTrack(tracknum);
+					if (tr != null) {
+						for (Sector s : tr.Sectors) {
+							if (s.Sectorsz != 2) {
+								IsValidCPMFileStructure = false;
+							}
+						}
+					}
+				}
+				Sector FirstSector = FirstDirTrack.GetSectorBySectorID(sector);
+				if (!IsValidCPMFileStructure)
+					System.out.println("Invalid CPM file structure (Sector size not valid for CPM)");
+				else {
+					// As an extra check, make sure there is sensible data in the first directory
+					// entry.
+					// This is either: all filler bytes, or byte 0=0,1-13 = ascii characters,
+					
+					//GDS 8 Feb 2022 if its already invalid, dont check further. Fixes issue with "Batman - the caped crusader" disk 
+					boolean allFiller = true;
+					for (int i = 0; i < 32; i++) {
+						if (FirstSector.data[i] != FirstDirTrack.fillerByte) {
+							allFiller = false;
+						}
+					}
+					if (!allFiller) {
+						int firstbyte = FirstSector.data[0] & 0xff;
+						// first byte 0-31 = user num of valid file, 0xe5 = deleted file
+						if ((firstbyte != 0xe5) && firstbyte > 31) {
+							IsValidCPMFileStructure = false;
+						} else {
+
+							// Check for a valid filename
+							for (int i = 1; i < 12; i++) {
+								char c = (char) (FirstSector.data[i] & 0x7f);
+								if (c != 0xe5) {
+									// Flags appear on bit 7 on the extensions, shouldnt appear elsewere.
+									if (((FirstSector.data[i] & 0x80) != 0) && i < 9) {
+										IsValidCPMFileStructure = false;
+									}
+									// Check the rest of the characters
+									if (!CPM.CharIsCPMValid(c) && c != ' ')
+										IsValidCPMFileStructure = false;
+								}
+							}
+
+						}
+						if (!IsValidCPMFileStructure)
+							System.out.println("Invalid CPM file structure (First Directory entry is invalid)");
+					}
+				}
+
+				// if we havent already decided the disk is invalid, parse out the BAM and
+				// DIRENTS.
+				if (IsValidCPMFileStructure) {
+					int loc = 0;
+					// set up the Block availability map.
+					bam = new boolean[maxblocks];
+					for (int i = 0; i < maxblocks; i++) {
+						bam[i] = false;
+					}
+					// add in the reserved blocks
+					for (int i = 0; i < reservedblocks; i++) {
+						bam[i] = true;
+					}
+
+					int DirectoryBlockSectors = (blockSize / sectorSize) * dirBlocks;
+
+					byte directory[] = new byte[DirectoryBlockSectors * sectorSize];
+					for (int i = 0; i < DirectoryBlockSectors; i++) {
+						Sector s = GetLinearTrack(track).GetSectorBySectorID(sector);
+						// copy sector
+						for (byte x : s.data) {
+							directory[loc++] = x;
+						}
+						// select next sector. if we run out of sectors in a track, select the next
+						// track.
+						sector++;
+						if (sector == GetLinearTrack(track).maxsectorID + 1) {
+							track++;
+							sector = GetLinearTrack(track).minsectorID;
+						}
+					}
+					// now we have the directory block loaded, we need to split it into dirents.
+					usedDirEnts = 0;
+					int numDirEnts = (DirectoryBlockSectors * sectorSize) / 32;
+					dirents = new Dirent[numDirEnts];
+					int address = 0;
+					for (int i = 0; i < numDirEnts; i++) {
+						Dirent d = new Dirent(i);
+						d.LoadDirentFromArray(directory, address);
+						d.Is16BitBlockID = (maxblocks > 255);
+						dirents[i] = d;
+						if ((d.getType() != Dirent.DIRENT_UNUSED) && (d.getType() != Dirent.DIRENT_DELETED)) {
+							usedDirEnts++;
+						}
+						address = address + 32;
+					}
+
+					// Convert the DIRENTS into a directory listing.
+					RecalculateDirectoryListing();
+
+					// calculate the disk size in Kbytes
+					diskSize = blockSize * (maxblocks - reservedblocks) / 1024;
+
+					// populate the BAM from the dirents
+					// firstly from the reserved (Directory) blocks
+					usedblocks = reservedblocks;
+					for (int i = 0; i < reservedblocks; i++) {
+						bam[i] = true;
+					}
+					// now from the files
+					for (Dirent d : dirents) {
+						int blocks[] = d.getBlocks();
+						boolean isdeleted = (d.getType() == Dirent.DIRENT_DELETED);
+						if (!isdeleted) {
+							for (int i : blocks) {
+								// used to output an error here, but detecting invalid blocks
+								// is now done by the directory structure.
+								if (i < bam.length) {
+									bam[i] = true;
+								}
+								usedblocks++;
+							}
+						}
+					}
+
+					// calculate the space left.
+					freeSpace = (maxblocks - usedblocks) * blockSize / 1024;
+				} else {
+					DirectoryEntries = null;
+					bam = null;
+					usedblocks = 0;
+					dirBlocks = 0;
+					freeSpace = 0;
+				}
 			}
 		} catch (Exception E) {
 			E.printStackTrace(System.err);
@@ -441,11 +460,11 @@ public class CPMDiskWrapper extends AMSDiskWrapper {
 		byte result[] = new byte[blockSize];
 		if (blockid >= maxblocks) {
 			byte[] txt = "INVALID ".getBytes();
-			int i=0;
-			int ptr=0;
+			int i = 0;
+			int ptr = 0;
 			while (ptr < blockSize) {
 				result[ptr++] = txt[i++];
-				if (i==txt.length) {
+				if (i == txt.length) {
 					i = 0;
 				}
 			}
