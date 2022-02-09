@@ -25,6 +25,7 @@ Supports Win64 and Linux x86_64 platforms. You may be able to build others by ch
 Install Maven on your platform and ensure you have Java 11 or OpenJDK11 installed
 Copy the appropriate pom (either pom-linux.xml or pom-win64.xml to pom.xml)
 CD to the source folder
+Remove the src\module-info.java
 mvn clean package
 
 You should then be able to run the program using the command line:
