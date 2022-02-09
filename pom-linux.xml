@@ -26,7 +26,14 @@
     	<groupId>org.eclipse.platform</groupId>
     	<artifactId>org.eclipse.swt.gtk.linux.x86_64</artifactId>
     	<version>3.117.0</version>
-	</dependency>
+</dependency>
+<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+<dependency>
+    <groupId>commons-io</groupId>
+    <artifactId>commons-io</artifactId>
+    <version>2.11.0</version>
+</dependency>
+
     </dependencies>
     
     <build>
@@ -67,14 +74,22 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
+		<version>3.9.0</version>
                 <configuration>
                     <source>11</source>
                     <target>11</target>
                     <encoding>UTF-8</encoding>
 		    <compilerArgs>
 		    </compilerArgs>
-                </configuration>
+		    </configuration>
+		    <executions>
+			    <execution>
+				    <goals>
+					    <goal>compile</goal>
+				    </goals>
+				    <id>compile</id>
+			    </execution>
+		    </executions>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
