@@ -1,3 +1,5 @@
+NOte, see the Github Wiki for this project for more detailed information including usage.
+
 # SpecPlus3DiskImgManipulator
 Editor for Spectrum +3 disk images in AMS disk format.
 Supports adding/deleting basic, code, and screen files. 
